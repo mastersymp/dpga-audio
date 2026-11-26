@@ -580,18 +580,20 @@
       <path id="L-house" class="lane" stroke="#e0a526" d="M95 34 V682"/>
       <path id="L-house2" class="lane" stroke="#e0a526" d="M265 34 V140 H95 V682"/>
       <path id="L-aux" class="lane" stroke="#e0a526" d="M265 176 V212 H95 V682"/>
+      <path id="L-auxs" class="lane" stroke="#a77bf3" d="M265 176 V212 H95 V318 H265 V612"/>
+      <path id="L-auxm" class="lane" stroke="#4caf7a" d="M265 176 V212 H95 V248 H265"/>
       <path id="L-mtx34" class="lane" stroke="#9aa1ae" stroke-dasharray="3 5" d="M340 318 H356 V770 H340"/>
       <path id="L-mtx34b" class="lane" stroke="#9aa1ae" stroke-dasharray="3 5" d="M265 792 V858"/>
       <path id="L-mtx56" class="lane" stroke="#9aa1ae" stroke-dasharray="3 5" d="M20 394 H3 V770 H20"/>
       <path id="L-mtx56b" class="lane" stroke="#9aa1ae" stroke-dasharray="3 5" d="M95 792 V858"/>
-      <path id="L-zoom" class="lane" stroke="#4fc3d9" stroke-dasharray="5 5" d="M340 176 H352 V280 H8 V394 H20"/>
+      <path id="L-zoom" class="lane" stroke="#e0a526" stroke-dasharray="5 5" d="M340 176 H352 V280 H8 V394 H20"/>
       <path id="L-stream" class="lane" stroke="#a77bf3" d="M95 34 V318 H265 V612"/>
       <path id="L-mon" class="lane" stroke="#4caf7a" d="M265 34 V140 H95 V248 H265"/>
       <g id="dots"></g>
       <g id="nodes"></g>
     </svg>
   </div>
-  <div class="legend"><span><i style="background:#e0a526"></i>House (room)</span><span><i style="background:#a77bf3"></i>Stream (online)</span><span><i style="background:#4caf7a"></i>Monitors (stage)</span><span><i style="background:#4fc3d9"></i>AUX 3/4 Zoom (LR only, muted Sundays)</span><span><i style="background:#9aa1ae"></i>Spare outputs (events, outside crews)</span></div>
+  <div class="legend"><span><i style="background:#e0a526"></i>House (room)</span><span><i style="background:#a77bf3"></i>Stream (online)</span><span><i style="background:#4caf7a"></i>Monitors (stage)</span><span><i style="background:none;border:2px dashed #e0a526;width:9px;height:9px"></i>AUX 3/4 Zoom: house only, skips the buses (muted Sundays)</span><span><i style="background:#9aa1ae"></i>Spare outputs (events, outside crews)</span></div>
   <div class="info" id="finfo"><h4>Tap a box</h4><p class="note">Each one shows what it does and what to check when the sound stops there.</p></div>
   <div class="row">
     <button class="btn primary" id="trace">Trace step by step</button>
@@ -930,8 +932,8 @@
       d:'Converts the stage mics to digital and sends them to the X32 over one AES50 B cable, on channels 17–25, 27 and 28. Channels 25, 27 and 28 share one mic through User In. Channels 26 and 29–32 come from the card through User In, not the S16, and are unused.',c:'All stage-box channels dead, or pops on all of them: check the AES50 B cable and link lights. Never move it to port A. Local channels 1–16 will still work, but the S16 also carries the monitors (S16 outputs 1–6) and the PA (S16 outputs 7/8), so those drop too.'},
     {id:'loc',x:265,y:104,w:150,t:'X32 local inputs',s:'XLR 1–16 · ch 1–16',lanes:['h','m'],
       d:'The XLR inputs on the back of the console.',c:'Only local channels affected: check those cables at the console. The S16 channels are on a different path.'},
-    {id:'aux',x:265,y:176,w:150,t:'Aux inputs',s:'laptop · Zoom · playback',lanes:['h'],
-      d:'Line-level sources: AUX 1 visuals laptop (videos and promos), AUX 5/6 card playback, AUX 7/8 X32 USB drive. AUX 3/4 (stream return from vMix, for Zoom) is the dashed line: it goes to Main LR only, skipping the buses, so Zoom callers are heard in the room without looping back onto the stream.',c:'Video or promo has no sound: AUX 1 unmuted and up, the laptop’s volume and cable, and ask media for a heads-up before it plays. AUX 3/4 stays muted on Sundays or the stream echoes.'},
+    {id:'aux',x:265,y:176,w:150,t:'Aux inputs',s:'laptop · Zoom · playback',lanes:['h','s','m'],
+      d:'Line-level sources: AUX 1 visuals laptop (videos and promos) goes to the house, the stream and the monitors, AUX 5/6 card playback, AUX 7/8 X32 USB drive. AUX 3/4 (stream return from vMix, for Zoom) is the dashed line: it goes to Main LR only, skipping the buses, so Zoom callers are heard in the room without looping back onto the stream.',c:'Video or promo has no sound: AUX 1 unmuted and up, the laptop’s volume and cable, and ask media for a heads-up before it plays. AUX 3/4 stays muted on Sundays or the stream echoes.'},
     {id:'ch',x:95,y:248,w:150,t:'X32 channels',s:'gain · mute · fader · DCA',lanes:['h','s','m'],
       d:'Each channel sets the gain and level of one source.',c:'Meter moving but no sound: channel mute, fader, its DCA, mute groups. Gain about −18 dB, then leave it.'},
     {id:'mon',x:265,y:248,w:150,t:'Monitor mixes',s:'S16 outputs 1–6',lanes:['m'],
@@ -990,7 +992,7 @@
   nodesG.addEventListener('click',function(e){var g=e.target.closest('.node');if(g){stopTrace();selectNode(g.dataset.id);}});
   nodesG.addEventListener('keydown',function(e){if(e.key==='Enter'){var g=e.target.closest('.node');if(g)selectNode(g.dataset.id);}});
 
-  var LANES=[['L-house','#e0a526',4,5.2],['L-house2','#e0a526',4,5.6],['L-aux','#e0a526',2,4.8],['L-zoom','#4fc3d9',2,4.4],['L-stream','#a77bf3',4,5.6],['L-mon','#4caf7a',2,3.2],['L-mtx34','#9aa1ae',2,5.2],['L-mtx56','#9aa1ae',2,5.2],['L-mtx34b','#9aa1ae',1,1.6],['L-mtx56b','#9aa1ae',1,1.6]];
+  var LANES=[['L-house','#e0a526',4,5.2],['L-house2','#e0a526',4,5.6],['L-aux','#e0a526',2,4.8],['L-auxs','#a77bf3',1,5.0],['L-auxm','#4caf7a',1,3.0],['L-zoom','#e0a526',2,4.4],['L-stream','#a77bf3',4,5.6],['L-mon','#4caf7a',2,3.2],['L-mtx34','#9aa1ae',2,5.2],['L-mtx56','#9aa1ae',2,5.2],['L-mtx34b','#9aa1ae',1,1.6],['L-mtx56b','#9aa1ae',1,1.6]];
   var built=false;
   function buildDots(){
     if(built)return;built=true;
