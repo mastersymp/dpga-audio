@@ -477,7 +477,7 @@
           <li><b>Fan noise or phasey sound:</b> keep the crowd mic (DCA 8) down in P&amp;W. Open it for the welcome and the responsive scripture reading.</li>
           <li><b>Chat says audio dropped:</b> get the time from media and log it.</li>
         </ul>
-        <p class="note">After service, ask media to check stream health in YouTube Studio's Live Control Room.</p>
+        <p class="note">Before the stream ends, ask media to check stream health in YouTube Studio's Live Control Room.</p>
       </div>
     </details>
 
@@ -536,7 +536,7 @@
 
 <!-- SUNDAY CHECKLIST -->
 <div class="view" id="v-sun">
-  <div class="chips" id="ckmode" style="margin:2px 0 4px"><button class="on" data-m="sun">Sunday</button><button data-m="tue">Tuesday prayer &amp; Bible study</button></div>
+  <div class="chips" id="ckmode" style="margin:2px 0 4px"><button class="on" data-m="sun">Sunday</button><button data-m="tue">Tuesday Prayer Meeting &amp; Bible Study</button></div>
   <div class="section-title"><span id="cktitle">Sunday checklist</span> <span id="sunDate"></span></div>
   <div class="prog"><div class="bar"><i id="pbar"></i></div><b id="pcount">0/0</b></div>
   <p class="note" style="margin:2px 2px 0">Ticks are saved on this phone and clear automatically each new week.</p>
@@ -743,8 +743,8 @@
       ['Arrived 60 minutes early (30 minimum)','']]],
     ['During the opening song',[
       ['Gains set by the meters','About −18 dB, leave room for louder songs. Then leave the gain alone'],
-      ['Snare never hits red','']]],
-    ['During the first P&W song',[
+      ['Levels set by faders','']]],
+    ['During the first P&W song (as needed/to taste)',[
       ['Sends on Fader on: button #8 (Stream)',''],
       ['Bus 13/14 vocal send to the stream set','Headphones on, MTX 1/2 soloed'],
       ['Sends on Fader off: press #8 again','Otherwise the faders keep moving the stream, not the house'],
@@ -752,9 +752,10 @@
     ['Podium segments',[
       ['BGVs (and lead if needed) muted when someone speaks','See the Podium tab'],
       ['Unmuted before the next song','Lead first, then BGVs']]],
+    ['Before the stream ends',[
+      ['Stream health checked','YouTube Studio Live Control Room, with the media team']]],
     ['After service',[
-      ['Stream health checked in YouTube Studio Live Control Room','With the media team'],
-      ['Wireless mic batteries back in the charger','The charger beside the console'],
+      ['Wireless mics collected for battery change/charging','Batteries back in the charger beside the console'],
       ['Scene NOT saved over','Never save over the DPGASunday scene, even after changes'],
       ['Weekly Log filled in, with why you made each change','Share your Log entries with the sound team'],
       ['Powered down in reverse order','Monitors › amps › DriveRack › S16 › receivers + keys › X32']]]
@@ -774,7 +775,7 @@
       ['Zoom callers checked in the room','Ask the media team to play a caller, then set the AUX 3/4 level']]],
     ['After',[
       ['AUX 3/4 muted again','It must be muted for Sunday, or the stream echoes'],
-      ['Batteries back in the charger',''],
+      ['Wireless mics collected for battery change/charging','Batteries back in the charger beside the console'],
       ['Scene NOT saved over','Never save over the DPGASunday scene'],
       ['Powered down in reverse order','Monitors › amps › DriveRack › S16 › receivers › X32']]]
   ];
@@ -793,7 +794,7 @@
     });
     $('checklist').innerHTML=html; $('pcount').textContent=done+'/'+total; $('pbar').style.width=(total?done/total*100:0)+'%';
     $('sunDate').textContent=sundayLabel();
-    $('cktitle').textContent=ckMode==='tue'?'Tuesday prayer meeting & Bible study':'Sunday checklist';
+    $('cktitle').textContent=ckMode==='tue'?'Tuesday Prayer Meeting & Bible Study':'Sunday checklist';
     [].forEach.call($('ckmode').children,function(b){b.classList.toggle('on',b.dataset.m===ckMode);});
   }
   $('ckmode').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;ckMode=b.dataset.m;store('dpga-ckmode',ckMode);renderCk();});
