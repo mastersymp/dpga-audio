@@ -1,5 +1,5 @@
 // DPGA Audio offline cache. Change VERSION whenever you upload new files.
-const VERSION = 'dpga-audio-2026-11-26-0110';
+const VERSION = 'dpga-audio-2026-11-26-0118';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
