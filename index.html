@@ -184,7 +184,7 @@
 <header>
   <div class="brand">
     <img src="icon.svg" alt="" style="width:30px;height:30px;align-self:center;border-radius:7px"><h1>DPGA Audio <span id="vtitle">Troubleshooting</span></h1>
-    <span class="sub">Updated 25 Nov 2026 · X32 Compact · S16 on AES50 B · Patch list v6.0</span>
+    <span class="sub">Updated 26 Nov 2026 · X32 Compact · S16 on AES50 B · Patch list v6.0</span>
   </div>
   <div class="hdr-tools" id="tools-fix">
     <div class="search">
@@ -303,7 +303,7 @@
       <summary><span class="tag t-mic">Mics</span>Wireless mic cutting in and out</summary>
       <div class="body">
         <ul>
-          <li><b>Battery meter low:</b> swap batteries between songs. Fresh ones every Sunday.</li>
+          <li><b>Battery meter low:</b> swap batteries between songs. They're AA rechargeables, in the charger beside the console.</li>
           <li><b>Drops when the singer moves:</b> clear the antennas, keep line of sight to the receivers, watch the RF meter.</li>
           <li><b>Battery and RF fine:</b> hand them a corded mic; check the wireless after service.</li>
           <li><b>Went quiet during a speaking part:</b> it was muted on purpose for feedback. Unmute before the next song.</li>
@@ -345,6 +345,18 @@
           <li><b>Snare / drums hitting red:</b> lower the drum gain; bring the drum DCA down if the room is too loud.</li>
           <li><b>Band distorts after song one:</b> they played softer at setup. Lower gains now; ask for full service level at setup next time.</li>
           <li><b>Everything:</b> Main LR in red. Lower Main LR or DCAs; check the amp clip lights.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="card" data-cat="noise">
+      <summary><span class="tag t-noise">Room</span>Room sounds too boomy</summary>
+      <div class="body">
+        <div class="first"><b>First:</b> lower the <b>bass guitar</b> channels: ch 9 (Bass Lo) and ch 10 (Bass Hi).</div>
+        <ul>
+          <li>Don't change EQ or the scene. Lowering the bass channels is the only fix to make during service.</li>
+          <li>Their in-ear mixes are pre-fader, so the bass player won't notice.</li>
+          <li>Log it, so Omar can decide on a lasting fix.</li>
         </ul>
       </div>
     </details>
@@ -524,7 +536,8 @@
 
 <!-- SUNDAY CHECKLIST -->
 <div class="view" id="v-sun">
-  <div class="section-title">Sunday checklist <span id="sunDate"></span></div>
+  <div class="chips" id="ckmode" style="margin:2px 0 4px"><button class="on" data-m="sun">Sunday</button><button data-m="tue">Tuesday prayer &amp; Bible study</button></div>
+  <div class="section-title"><span id="cktitle">Sunday checklist</span> <span id="sunDate"></span></div>
   <div class="prog"><div class="bar"><i id="pbar"></i></div><b id="pcount">0/0</b></div>
   <p class="note" style="margin:2px 2px 0">Ticks are saved on this phone and clear automatically each new week.</p>
   <div id="checklist"></div>
@@ -600,7 +613,8 @@
       <li><b>One change at a time.</b> Change one thing, listen, then decide.</li>
       <li><b>Don't touch routing.</b> No changes to User In patching, AES50, the ATEM or vMix during service.</li>
       <li><b>Write down the time</b> of every dropout, pop or squeal. Use the Log button.</li>
-      <li><b>Ask early.</b> Omar on keys? Use talkback. Otherwise message him after the song.</li>
+      <li><b>Never save over the DPGASunday scene.</b> Your changes are for today only.</li>
+      <li><b>Ask early.</b> Omar on keys? Use talkback. Otherwise message him after the song. If Omar can't be reached, contact <b>Elder Denton</b>.</li>
     </ol>
   </section>
 
@@ -615,7 +629,12 @@
     <div><b>Monitors</b>Bus 1 Wedges · 3 Drums · 4 Keys · 5 Bass · 6 Extra (all pre-fader)</div>
     <div><b>Stream</b>MTX 1/2 (solo to listen) · Bus 2 Crowd · AUX 3/4 muted</div>
     <div><b>User buttons</b>#4 delay tap tempo · #8 Sends on Fader: Stream</div>
+    <div><b>Batteries</b>AA rechargeables, in the charger beside the console</div>
+    <div><b>Contact</b>Omar first. If he can't be reached, Elder Denton</div>
   </div>
+
+  <div class="section-title">Words used in this app</div>
+  <div class="ref" id="glossary"><div><b>DCA</b>A fader that controls a group of channels at once without carrying sound itself. DCA 4 moves both lead mics.</div><div><b>Channel</b>One input: a mic, instrument or playback source, with its own gain, mute and fader.</div><div><b>Gain</b>How much the mic is boosted at the input. Set once (about −18 dB), then leave it.</div><div><b>Bus</b>A mix that channels feed into: a monitor mix, an FX send or a subgroup.</div><div><b>Subgroup</b>A bus that groups related channels before Main LR, like all vocals (13/14) or drums (9/10).</div><div><b>Send</b>How much of a channel goes to a bus.</div><div><b>Pre-fader</b>A send that ignores the channel fader. Used for monitors, so house moves don't change the band's mix.</div><div><b>Post-fader</b>A send that follows the channel fader. Used for the stream and delay.</div><div><b>Main LR</b>The main mix for the room speakers.</div><div><b>Matrix (MTX)</b>A mix built from buses and sent somewhere else. MTX 1/2 is the stream.</div><div><b>Sends on Fader</b>Turns the faders into send levels for one bus (button #8 for the stream). Press again to turn it off.</div><div><b>Mute group</b>A button that mutes a set of channels at once. If something's silent, check none is lit.</div><div><b>FX return</b>Where an effect (like the delay) comes back into the desk.</div><div><b>S16</b>The stage box in the music room: stage mics in, monitors and PA out.</div><div><b>AES50</b>The single cable linking the S16 and the X32. DPGA uses port B.</div><div><b>Scene</b>A saved snapshot of the whole desk. Load DPGASunday to start.</div><div><b>Scene safe</b>Settings a scene load won't change, like routing and PLAY/REC.</div><div><b>PLAY/REC</b>Routing mode. REC = live inputs (service). PLAY = card playback (virtual soundcheck).</div><div><b>Talkback</b>The mic you use to talk to the band's in-ears (Talk A) or the singers' wedges (Talk B).</div><div><b>IEM</b>In-ear monitors, worn by the musicians.</div><div><b>Wedge</b>A floor monitor speaker. The singers share two on Bus 1.</div><div><b>DI box</b>Turns an instrument's output into a mic-level signal for the desk. Has a ground lift for hum.</div><div><b>Phantom power</b>Power sent down the mic cable for condenser mics.</div><div><b>Clipping</b>A signal too loud for the meter (red). It sounds harsh: lower the gain.</div><div><b>Feedback</b>The squeal when a mic picks up its own sound from a speaker. Pull the level down first.</div></div>
 </div>
 
 <!-- LOG -->
@@ -659,7 +678,7 @@
 
 <nav class="tabbar" id="tabbar">
   <button data-v="v-fix" data-t="Troubleshooting" class="on"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>Fix it</button>
-  <button data-v="v-sun" data-t="Sunday checklist"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>Sunday</button>
+  <button data-v="v-sun" data-t="Checklists"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>Checklist</button>
   <button data-v="v-pod" data-t="Podium"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg>Podium</button>
   <button data-v="v-patch" data-t="Patch list"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="10" cy="18" r="1.5"/></svg>Patch</button>
   <button data-v="v-flow" data-t="Signal flow"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M5 8v2a4 4 0 0 0 4 4h3v2M19 8v2a4 4 0 0 1-4 4h-3"/></svg>Flow</button>
@@ -719,7 +738,7 @@
       ['Vocal delay muted to start','Tap tempo on button #4 when you use it'],
       ['DCA 4 lead and DCA 5 BGVs at starting levels','BGVs about 6 dB below the lead'],
       ['AUX 3/4 Stream Return muted','Only used for Zoom meetings'],
-      ['Fresh batteries in every wireless mic','3 wireless + 2 corded'],
+      ['Fresh batteries in every wireless mic','AA rechargeables, from the charger beside the console. 3 wireless + 2 corded'],
       ['Antennas clear, RF and battery meters checked',''],
       ['Arrived 60 minutes early (30 minimum)','']]],
     ['During the opening song',[
@@ -735,27 +754,52 @@
       ['Unmuted before the next song','Lead first, then BGVs']]],
     ['After service',[
       ['Stream health checked in YouTube Studio Live Control Room','With the media team'],
-      ['Wireless mics collected for battery change',''],
+      ['Wireless mic batteries back in the charger','The charger beside the console'],
+      ['Scene NOT saved over','Never save over the DPGASunday scene, even after changes'],
       ['Weekly Log filled in, with why you made each change','Share your Log entries with the sound team'],
       ['Powered down in reverse order','Monitors › amps › DriveRack › S16 › receivers + keys › X32']]]
   ];
+  var CK_TUE=[
+    ['Power on, in order',[
+      ['X32 first','Then load the last DPGASunday scene'],
+      ['Routing on REC, not PLAY','Routing screen: turn the rightmost knob to REC, push to confirm'],
+      ['Mic receivers, S16, DriveRack, both amps','Same order as Sunday. Monitors only if the band plays']]],
+    ['Mics',[
+      ['Podium mic out (ch 17)','The main mic for the evening'],
+      ['Lead mic ready for Q&A (DCA 4)','It may be passed into the audience. Watch for feedback as it moves'],
+      ['Batteries checked','AA rechargeables, from the charger beside the console'],
+      ['Unused mics and the BGVs muted','Only what’s needed is open']]],
+    ['Zoom',[
+      ['AUX 3/4 (Stream Return) unmuted and up','So the room hears the Zoom callers. It goes to Main LR only, not the stream'],
+      ['Zoom callers checked in the room','Ask the media team to play a caller, then set the AUX 3/4 level']]],
+    ['After',[
+      ['AUX 3/4 muted again','It must be muted for Sunday, or the stream echoes'],
+      ['Batteries back in the charger',''],
+      ['Scene NOT saved over','Never save over the DPGASunday scene'],
+      ['Powered down in reverse order','Monitors › amps › DriveRack › S16 › receivers › X32']]]
+  ];
+  var ckMode=store('dpga-ckmode')||'sun';
+  function curCK(){return ckMode==='tue'?CK_TUE:CK;}
   function weekKey(){var d=new Date();var day=(d.getDay()+6)%7;d.setHours(0,0,0,0);d.setDate(d.getDate()-day);return d.toISOString().slice(0,10);}
-  function sundayLabel(){var d=new Date();d.setDate(d.getDate()+((7-d.getDay())%7));return '· Sun '+d.toLocaleDateString(undefined,{day:'numeric',month:'short'});}
+  function sundayLabel(){var d=new Date();var tgt=ckMode==='tue'?2:0;d.setDate(d.getDate()+((7+tgt-d.getDay())%7));return '· '+(ckMode==='tue'?'Tue ':'Sun ')+d.toLocaleDateString(undefined,{day:'numeric',month:'short'});}
   var ckState=store('dpga-ck')||{};
   if(ckState.week!==weekKey()) ckState={week:weekKey(),done:{}};
   function renderCk(){
     var html='',total=0,done=0;
-    CK.forEach(function(g,gi){
-      var gd=0;var items=g[1].map(function(it,ii){var id=gi+'-'+ii,on=!!ckState.done[id];total++;if(on){done++;gd++;}
+    curCK().forEach(function(g,gi){
+      var gd=0;var items=g[1].map(function(it,ii){var id=ckMode+'-'+gi+'-'+ii,on=!!ckState.done[id];total++;if(on){done++;gd++;}
         return '<div class="ck'+(on?' done':'')+'" data-id="'+id+'" role="checkbox" aria-checked="'+on+'" tabindex="0"><div class="box"></div><div class="txt">'+esc(it[0])+(it[1]?'<small>'+esc(it[1])+'</small>':'')+'</div></div>';}).join('');
       html+='<div class="group"><h3>'+esc(g[0])+'<span>'+gd+'/'+g[1].length+'</span></h3>'+items+'</div>';
     });
     $('checklist').innerHTML=html; $('pcount').textContent=done+'/'+total; $('pbar').style.width=(total?done/total*100:0)+'%';
     $('sunDate').textContent=sundayLabel();
+    $('cktitle').textContent=ckMode==='tue'?'Tuesday prayer meeting & Bible study':'Sunday checklist';
+    [].forEach.call($('ckmode').children,function(b){b.classList.toggle('on',b.dataset.m===ckMode);});
   }
+  $('ckmode').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;ckMode=b.dataset.m;store('dpga-ckmode',ckMode);renderCk();});
   $('checklist').addEventListener('click',function(e){var r=e.target.closest('.ck');if(!r)return;var id=r.dataset.id;if(ckState.done[id])delete ckState.done[id];else ckState.done[id]=Date.now();store('dpga-ck',ckState);renderCk();});
   $('checklist').addEventListener('keydown',function(e){if(e.key===' '||e.key==='Enter'){var r=e.target.closest('.ck');if(r){e.preventDefault();r.click();}}});
-  twoTap($('resetCk'),'Reset checklist',function(){ckState={week:weekKey(),done:{}};store('dpga-ck',ckState);renderCk();toast('Checklist cleared');});
+  twoTap($('resetCk'),'Reset checklist',function(){Object.keys(ckState.done).forEach(function(k){if(k.indexOf(ckMode+'-')===0)delete ckState.done[k];});ckState.week=weekKey();store('dpga-ck',ckState);renderCk();toast('Checklist cleared');});
   renderCk();
 
   /* ---------- Patch list v6.0 ---------- */
@@ -916,7 +960,7 @@
     var t2=document.createElementNS(NS,'text');t2.setAttribute('x',n.x);t2.setAttribute('y',n.y+13);t2.setAttribute('class','s');t2.textContent=n.s;
     g.appendChild(r);g.appendChild(t1);g.appendChild(t2);nodesG.appendChild(g);byId[n.id]={n:n,g:g};
   });
-  var REL={"srcS": ["no sound and no meter", "Wireless mic cutting", "Squealing during singing"], "srcL": ["no sound and no meter", "Hum, buzz", "Musician's in-ears"], "s16": ["Hum, buzz", "Nothing coming out of the house"], "loc": ["no sound and no meter", "Mics and instruments silent"], "aux": ["Video, promo or playback", "Echo, doubling"], "ch": ["meter is moving", "Mics and instruments silent", "Harsh, crunchy"], "mon": ["Musician's in-ears", "Singers can't hear", "Squealing during singing"], "sub": ["No vocal delay", "Nothing coming out of the house", "meter is moving", "Vocals too loud or buried"], "main": ["Nothing coming out of the house", "Harsh, crunchy"], "mtx": ["No audio on the livestream", "Vocals too loud or buried", "Echo, doubling"], "s16o": ["Nothing coming out of the house", "Hum, buzz"], "atem": ["Stream sounds distorted", "No audio on the livestream"], "dr": ["Nothing coming out of the house"], "vmix": ["No audio on the livestream", "Stream sounds distorted", "Echo, doubling"], "amp": ["Only the subs", "Power cut"], "yt": ["No audio on the livestream"], "spk": ["Only the subs", "Nothing coming out of the house"]};
+  var REL={"srcS": ["no sound and no meter", "Wireless mic cutting", "Squealing during singing"], "srcL": ["no sound and no meter", "Hum, buzz", "Musician's in-ears"], "s16": ["Hum, buzz", "Nothing coming out of the house"], "loc": ["no sound and no meter", "Mics and instruments silent"], "aux": ["Video, promo or playback", "Echo, doubling"], "ch": ["meter is moving", "Mics and instruments silent", "Harsh, crunchy"], "mon": ["Musician's in-ears", "Singers can't hear", "Squealing during singing"], "sub": ["No vocal delay", "Nothing coming out of the house", "meter is moving", "Vocals too loud or buried"], "main": ["Nothing coming out of the house", "Harsh, crunchy"], "mtx": ["No audio on the livestream", "Vocals too loud or buried", "Echo, doubling"], "s16o": ["Nothing coming out of the house", "Hum, buzz"], "atem": ["Stream sounds distorted", "No audio on the livestream"], "dr": ["Nothing coming out of the house"], "vmix": ["No audio on the livestream", "Stream sounds distorted", "Echo, doubling"], "amp": ["Only the subs", "Power cut"], "yt": ["No audio on the livestream"], "spk": ["Room sounds too boomy", "Only the subs", "Nothing coming out of the house"]};
   function cardFor(frag){for(var i=0;i<cards.length;i++){var s=cards[i].querySelector('summary');if(s&&s.textContent.indexOf(frag)>-1)return cards[i];}return null;}
   function goCard(frag){
     var c=cardFor(frag); if(!c)return;
