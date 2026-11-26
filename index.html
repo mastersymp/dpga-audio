@@ -549,8 +549,8 @@
   <div class="pod up">
     <h2>Speaker steps up</h2>
     <p class="lead">Do this before they start talking, so the podium mic doesn't feed back.</p>
-    <div class="step"><div class="n">1</div><div><b><span class="dca mute">DCA 5</span>Mute BGVs</b><span>All BGVs, ch 19–22</span></div></div>
-    <div class="step"><div class="n">2</div><div><b><span class="dca mute">DCA 4</span>Mute lead (if needed)</b><span>Lead vox ch 23–24. Keep it open if the leader is talking</span></div></div>
+    <div class="step"><div class="n">1</div><div><b><span class="dca mute">DCA 5</span>Mute BGVs</b><span>BGVs, ch 19–22 and 24</span></div></div>
+    <div class="step"><div class="n">2</div><div><b><span class="dca mute">DCA 4</span>Mute lead (if needed)</b><span>Lead vox, ch 23. Keep it open if the leader is talking</span></div></div>
     <div class="step"><div class="n">3</div><div><b><span class="dca mute">DCA 7</span>Mute delay</b><span>So the speech has no echo FX</span></div></div>
     <div class="step"><div class="n">4</div><div><b><span class="dca up">DCA 3</span>Speaking mic up</b><span>Podium ch 17 · Headset ch 18. Lower its wedge send if it rings</span></div></div>
   </div>
@@ -568,6 +568,7 @@
 <div class="view" id="v-patch">
   <div id="patch"></div>
   <div class="empty" id="pempty">Nothing matches. Try a number like 18, or a word like "BGV".</div>
+  <div class="tip"><b>DCAs can change.</b> Select a DCA on the desk to see exactly which channels it controls in the scene you’ve loaded.</div>
   <div class="tip"><b>Post-fader</b> sends follow your channel and bus faders (the stream matrix). <b>Pre-fader</b> sends ignore them (monitor mixes), so the musicians' levels stay put. Set input gain once, then leave it: it changes everyone's monitors too.</div>
 </div>
 
@@ -598,7 +599,6 @@
 <div class="view" id="v-more">
   <div class="section-title">Links</div>
   <div class="links">
-    <div class="links-static" id="getlink" style="display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:8px 0"><div class="ic" style="background:#173023;color:#8fdcaa;flex:0 0 36px;height:36px;border-radius:9px;display:grid;place-items:center;font-size:12px;font-weight:800">APP</div><div><b style="display:block">Install on your phone</b><span style="color:var(--muted);font-size:13px">iPhone: Share › Add to Home Screen. Android: ⋮ › Install app. Works offline after the first open.</span><button type="button" class="btn primary" id="installBtn" hidden style="margin-top:8px">Install app</button></div></div>
     <a href="https://drive.google.com/drive/folders/1Vy2lDJ0ifaLqPwRojt5lhpobuuIRiIMP" target="_blank" rel="noopener"><div class="ic" style="background:#1d2c3d;color:#9cc7f0">DRV</div><div><b>DPGA SOUND folder</b><span>SOPs, patch lists, scenes (Google Drive)</span></div></a>
     <a href="https://drive.google.com/file/d/1z9qFIWczu5CZr0tsoKY8AKbcCX8QJLsg/view" target="_blank" rel="noopener"><div class="ic" style="background:#3a1f1f;color:#ff9b94">PDF</div><div><b>X32 Patch List v6.0</b><span>Updated Nov 21, 2026</span></div></a>
     <a href="https://forms.gle/hjPLP8X3EfHom3i26" target="_blank" rel="noopener"><div class="ic" style="background:#2e2340;color:#c9a8f5">FORM</div><div><b>Pulse check</b><span>Feedback form, the one pinned in the stream chat</span></div></a>
@@ -634,7 +634,7 @@
   </div>
 
   <div class="section-title">Words used in this app</div>
-  <div class="ref" id="glossary"><div><b>DCA</b>A fader that controls a group of channels at once without carrying sound itself. DCA 4 moves both lead mics.</div><div><b>Channel</b>One input: a mic, instrument or playback source, with its own gain, mute and fader.</div><div><b>Gain</b>How much the mic is boosted at the input. Set once (about −18 dB), then leave it.</div><div><b>Bus</b>A mix that channels feed into: a monitor mix, an FX send or a subgroup.</div><div><b>Subgroup</b>A bus that groups related channels before Main LR, like all vocals (13/14) or drums (9/10).</div><div><b>Send</b>How much of a channel goes to a bus.</div><div><b>Pre-fader</b>A send that ignores the channel fader. Used for monitors, so house moves don't change the band's mix.</div><div><b>Post-fader</b>A send that follows the channel fader. Used for the stream and delay.</div><div><b>Main LR</b>The main mix for the room speakers.</div><div><b>Matrix (MTX)</b>A mix built from buses and sent somewhere else. MTX 1/2 is the stream.</div><div><b>Sends on Fader</b>Turns the faders into send levels for one bus (button #8 for the stream). Press again to turn it off.</div><div><b>Mute group</b>A button that mutes a set of channels at once. If something's silent, check none is lit.</div><div><b>FX return</b>Where an effect (like the delay) comes back into the desk.</div><div><b>S16</b>The stage box in the music room: stage mics in, monitors and PA out.</div><div><b>AES50</b>The single cable linking the S16 and the X32. DPGA uses port B.</div><div><b>Scene</b>A saved snapshot of the whole desk. Load DPGASunday to start.</div><div><b>Scene safe</b>Settings a scene load won't change, like routing and PLAY/REC.</div><div><b>PLAY/REC</b>Routing mode. REC = live inputs (service). PLAY = card playback (virtual soundcheck).</div><div><b>Talkback</b>The mic you use to talk to the band's in-ears (Talk A) or the singers' wedges (Talk B).</div><div><b>IEM</b>In-ear monitors, worn by the musicians.</div><div><b>Wedge</b>A floor monitor speaker. The singers share two on Bus 1.</div><div><b>DI box</b>Turns an instrument's output into a mic-level signal for the desk. Has a ground lift for hum.</div><div><b>Phantom power</b>Power sent down the mic cable for condenser mics.</div><div><b>Clipping</b>A signal too loud for the meter (red). It sounds harsh: lower the gain.</div><div><b>Feedback</b>The squeal when a mic picks up its own sound from a speaker. Pull the level down first.</div></div>
+  <div class="ref" id="glossary"><div><b>DCA</b>A fader that controls a group of channels at once without carrying sound itself. Select a DCA on the desk to see which channels it controls.</div><div><b>Channel</b>One input: a mic, instrument or playback source, with its own gain, mute and fader.</div><div><b>Gain</b>How much the mic is boosted at the input. Set once (about −18 dB), then leave it.</div><div><b>Bus</b>A mix that channels feed into: a monitor mix, an FX send or a subgroup.</div><div><b>Subgroup</b>A bus that groups related channels before Main LR, like all vocals (13/14) or drums (9/10).</div><div><b>Send</b>How much of a channel goes to a bus.</div><div><b>Pre-fader</b>A send that ignores the channel fader. Used for monitors, so house moves don't change the band's mix.</div><div><b>Post-fader</b>A send that follows the channel fader. Used for the stream and delay.</div><div><b>Main LR</b>The main mix for the room speakers.</div><div><b>Matrix (MTX)</b>A mix built from buses and sent somewhere else. MTX 1/2 is the stream.</div><div><b>Sends on Fader</b>Turns the faders into send levels for one bus (button #8 for the stream). Press again to turn it off.</div><div><b>Mute group</b>A button that mutes a set of channels at once. If something's silent, check none is lit.</div><div><b>FX return</b>Where an effect (like the delay) comes back into the desk.</div><div><b>S16</b>The stage box in the music room: stage mics in, monitors and PA out.</div><div><b>AES50</b>The single cable linking the S16 and the X32. DPGA uses port B.</div><div><b>Scene</b>A saved snapshot of the whole desk. Load DPGASunday to start.</div><div><b>Scene safe</b>Settings a scene load won't change, like routing and PLAY/REC.</div><div><b>PLAY/REC</b>Routing mode. REC = live inputs (service). PLAY = card playback (virtual soundcheck).</div><div><b>Talkback</b>The mic you use to talk to the band's in-ears (Talk A) or the singers' wedges (Talk B).</div><div><b>IEM</b>In-ear monitors, worn by the musicians.</div><div><b>Wedge</b>A floor monitor speaker. The singers share two on Bus 1.</div><div><b>DI box</b>Turns an instrument's output into a mic-level signal for the desk. Has a ground lift for hum.</div><div><b>Phantom power</b>Power sent down the mic cable for condenser mics.</div><div><b>Clipping</b>A signal too loud for the meter (red). It sounds harsh: lower the gain.</div><div><b>Feedback</b>The squeal when a mic picks up its own sound from a speaker. Pull the level down first.</div></div>
 </div>
 
 <!-- LOG -->
@@ -828,7 +828,7 @@
       ['21','BGV','VOX','AES50B ch 5','Centre · DCA 5'],
       ['22','BGV','VOX','AES50B ch 6','Slight L/R · DCA 5'],
       ['23','Lead Vox 1','VOX','AES50B ch 7','Centre · DCA 4'],
-      ['24','Lead Vox 2','VOX','AES50B ch 8','A BGV, not a lead · slight L/R · DCA 4'],
+      ['24','Lead Vox 2','VOX','AES50B ch 8','A BGV, not a lead · slight L/R · DCA 5'],
       ['25','Skit Mic','STAGE','UserIN17 → AES50B ch 9','Phantom ON · FOH and Crowd bus only'],
       ['26','(unused)','MISC','UserIN18 → Card In 26',''],
       ['27','Crowd 1','AMBIENT','Same source as ch 25','Hard left · Crowd bus only · DCA 8'],
@@ -887,8 +887,8 @@
       ['DCA 1','Drums','','','Both drum subgroups'],
       ['DCA 2','Instruments','','','Instrument subgroup (11/12)'],
       ['DCA 3','Speaking mic','','','Podium ch 17 and headset ch 18'],
-      ['DCA 4','Lead Vocal','','','Ch 23 and 24'],
-      ['DCA 5','BGVs','','','Ch 19–22'],
+      ['DCA 4','Lead Vocal','','','Lead Vox 1, ch 23'],
+      ['DCA 5','BGVs','','','Ch 19–22 and 24'],
       ['DCA 6','Wedges','','','All stage monitors'],
       ['DCA 7','Delay 2','','','Delay FX level. Mute while people speak'],
       ['DCA 8','Crowd','','','Crowd mic channels and bus']]}
@@ -919,7 +919,7 @@
   var NS='http://www.w3.org/2000/svg';
   var N=[
     {id:'srcS',x:95,y:34,w:150,t:'Stage box sources',s:'vocal · speaking · crowd',lanes:['h','s'],
-      d:'Plugged in on stage: podium (17), headset (18), BGVs (19–22), leads (23–24), skit/crowd mic (25, 27–28). Includes the 3 wireless and 2 corded mics.',c:'One mic silent with no meter: wireless battery, receiver on, RF meter, or the cable into the S16.'},
+      d:'Plugged in on stage: podium (17), headset (18), BGVs (19–22 and 24), lead (23), skit/crowd mic (25, 27–28). Includes the 3 wireless and 2 corded mics.',c:'One mic silent with no meter: wireless battery, receiver on, RF meter, or the cable into the S16.'},
     {id:'srcL',x:265,y:34,w:150,t:'Local input sources',s:'drums · bass · keys · TB',lanes:['h','m'],
       d:'Plugged straight into the X32: drums (1–8), bass (9–10), talkback (12–14), keys (15–16).',c:'One instrument silent with no meter: cable into the X32 local input, DI box, or the instrument isn\u2019t sending.'},
     {id:'s16',x:95,y:104,w:150,t:'S16 stage box',s:'AES50 B · ch 17–28',lanes:['h','s'],
