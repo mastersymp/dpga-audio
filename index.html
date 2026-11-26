@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DPGA Audio</title>
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DPGA Audio">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+  :root{--bg:#0f1115;--panel:#181b22;--panel2:#20242d;--line:#2c313c;--text:#e8eaef;--muted:#9aa1ae;--accent:#e0a526;--red:#e5534b;--green:#4caf7a;--purple:#a77bf3}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+  header{position:sticky;top:0;z-index:5;background:rgba(15,17,21,.96);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:calc(12px + env(safe-area-inset-top)) 16px 10px}
+  .brand{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  h1{font-size:19px;margin:0}
+  h1 span{color:var(--accent)}
+  .sub{color:var(--muted);font-size:13px}
+  .search{margin-top:10px;display:flex;gap:8px}
+  .search input{flex:1;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--text);min-width:0}
+  .search input:focus{outline:2px solid var(--accent);border-color:transparent}
+  .search button{font-size:14px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer}
+  .chips{display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:2px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chips button{flex:0 0 auto;font-size:13px;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer}
+  .chips button.on{background:var(--accent);color:#141414;border-color:var(--accent);font-weight:600}
+  .hdr-tools{display:none}
+  body[data-v="v-fix"] #tools-fix, body[data-v="v-patch"] #tools-patch{display:block}
+  main{max-width:900px;margin:0 auto;padding:14px 14px 40px}
+  .view{display:none}.view.on{display:block}
+  .section-title{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:22px 2px 8px}
+  .section-title:first-child{margin-top:6px}
+  .note{color:var(--muted);font-size:14px}
+  .empty{display:none;text-align:center;color:var(--muted);padding:26px}
+  kbd{background:#2b303a;border:1px solid #3c4350;border-radius:5px;padding:0 5px;font-size:13px;font-family:inherit}
+
+  /* cards */
+  details.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin:8px 0;overflow:hidden}
+  details.card[open]{border-color:#3b4250}
+  summary{list-style:none;cursor:pointer;padding:13px 14px;display:flex;gap:10px;align-items:center;font-weight:600}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";margin-left:auto;color:var(--muted);font-size:20px;line-height:1}
+  details[open] summary::after{content:"\2212"}
+  .tag{flex:0 0 auto;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;letter-spacing:.5px;text-transform:uppercase}
+  .t-house{background:#3a1f1f;color:#ff9b94}.t-mic{background:#1d2c3d;color:#9cc7f0}.t-noise{background:#3a2e14;color:#f3c867}
+  .t-mon{background:#1f3326;color:#8fdcaa}.t-stream{background:#2e2340;color:#c9a8f5}.t-power{background:#3d2a1a;color:#ffb27a}.t-fx{background:#1f2f3a;color:#8fd0f0}.t-normal{background:#2a2d33;color:#b9bfca}
+  .body{padding:0 16px 14px;border-top:1px solid var(--line)}
+  .body ol,.body ul{padding-left:20px;margin:10px 0}
+  .body li{margin:5px 0}
+  .body p{margin:10px 0}
+  .first{background:var(--panel2);border-left:3px solid var(--red);padding:8px 12px;border-radius:6px;margin-top:12px;font-size:15px}
+  .first b{color:#ff9b94}
+  .ok{border-left-color:var(--green)}.ok b{color:#8fdcaa}
+  .signals{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}
+  .signals div{background:var(--panel2);border-radius:8px;padding:7px 10px;font-size:14px}
+
+  /* checklist */
+  .prog{display:flex;align-items:center;gap:10px;margin:4px 2px 6px}
+  .bar{flex:1;height:8px;background:var(--panel2);border-radius:99px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:var(--green);transition:width .3s}
+  .prog b{font-variant-numeric:tabular-nums;font-size:14px;min-width:48px;text-align:right}
+  .group{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin:8px 0;overflow:hidden}
+  .group h3{margin:0;font-size:14px;padding:10px 14px;background:var(--panel2);display:flex;justify-content:space-between;gap:8px}
+  .group h3 span{color:var(--muted);font-weight:500;font-variant-numeric:tabular-nums}
+  .ck{display:flex;gap:12px;align-items:flex-start;padding:11px 14px;border-top:1px solid var(--line);cursor:pointer;user-select:none}
+  .ck:first-of-type{border-top:0}
+  .ck .box{flex:0 0 24px;height:24px;border-radius:7px;border:2px solid #4a5160;display:grid;place-items:center;margin-top:1px;transition:.15s}
+  .ck.done .box{background:var(--green);border-color:var(--green)}
+  .ck.done .box::after{content:"";width:6px;height:11px;border:solid #0f1115;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+  .ck.done .txt{color:var(--muted);text-decoration:line-through;text-decoration-color:#555}
+  .ck small{display:block;color:var(--muted);font-size:13px}
+  .ck.done small{text-decoration:none}
+
+  /* podium */
+  .pod{border-radius:16px;padding:16px 16px 14px;margin:10px 0;border:1px solid}
+  .pod h2{margin:0 0 4px;font-size:20px}
+  .pod p.lead{margin:0 0 10px;color:var(--muted);font-size:14px}
+  .pod.up{background:linear-gradient(180deg,#341b1b,#1e1515);border-color:#6a2b2b}
+  .pod.up h2{color:#ff9b94}
+  .pod.back{background:linear-gradient(180deg,#173023,#141c17);border-color:#2c6044}
+  .pod.back h2{color:#8fdcaa}
+  .step{display:flex;gap:12px;align-items:center;background:rgba(0,0,0,.25);border-radius:12px;padding:12px;margin:8px 0}
+  .step .n{flex:0 0 34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:16px;background:rgba(255,255,255,.08)}
+  .step b{font-size:18px;display:block;line-height:1.25}
+  .step span{color:var(--muted);font-size:13.5px}
+  .dca{display:inline-block;min-width:64px;text-align:center;font-weight:800;border-radius:8px;padding:2px 8px;margin-right:6px;font-size:15px}
+  .mute{background:#5a2323;color:#ffb3ad}.unmute{background:#1f4a32;color:#a6ecc0}.up{background:#4a3a12;color:#ffd77a}
+
+  /* patch */
+  .pt{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:14.5px}
+  .pt th{background:var(--panel2);text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);padding:8px 10px;font-weight:600}
+  .pt td{padding:9px 10px;border-top:1px solid var(--line);vertical-align:top}
+  .pt td:first-child{font-weight:800;color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .pt td .nm{font-weight:600}
+  .pt td .sm{display:block;color:var(--muted);font-size:13px}
+  .pt tr.unused td{opacity:.5}
+  .ty{font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;background:var(--panel2);color:var(--muted);letter-spacing:.4px;margin-left:4px;vertical-align:1px}
+  .ptwrap{margin-bottom:6px}
+  .tip{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 12px;font-size:14px;margin:10px 0}
+
+  /* flow */
+  .flowbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 6px 4px}
+  .flowbox svg{width:100%;height:auto;display:block}
+  .node rect{fill:#20242d;stroke:#3a404c;stroke-width:1.2;transition:fill .2s,stroke .2s}
+  .node{cursor:pointer}
+  .node text{fill:var(--text);font-size:12.5px;font-weight:600;text-anchor:middle;pointer-events:none}
+  .node text.s{fill:var(--muted);font-size:10.5px;font-weight:500}
+  .node.sel rect{stroke:var(--accent);stroke-width:2;fill:#2b2618}
+  .node.lit rect{stroke:#fff;fill:#2e3340}
+  .lane{fill:none;stroke-width:3;stroke-linecap:round;opacity:.28}
+  .dot{filter:drop-shadow(0 0 4px currentColor)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:10px 4px 0}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+  .info{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:10px;min-height:80px}
+  .info h4{margin:0 0 4px;font-size:15px;color:var(--accent)}
+  .info p{margin:4px 0;font-size:14.5px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .btn{padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:14px;font-weight:600;cursor:pointer}
+  .btn.primary{background:var(--accent);color:#141414;border-color:var(--accent)}
+  .btn.danger{color:#ff9b94}
+  .paused .dot{visibility:hidden}
+  .rel{display:flex;flex-direction:column;gap:6px}
+  .relbtn{text-align:left;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px 12px;font:inherit;font-size:14.5px;cursor:pointer;min-height:44px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .relbtn span{color:var(--accent);font-size:20px}
+  details.card.flash{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* more */
+  .rules{background:linear-gradient(180deg,#2a2210,#1c1a14);border:1px solid #5a4614;border-radius:14px;padding:14px 16px;margin-bottom:12px}
+  .rules h2{margin:0 0 8px;font-size:15px;color:var(--accent);text-transform:uppercase;letter-spacing:.8px}
+  .rules ol{margin:0;padding-left:20px}.rules li{margin:3px 0}
+  .ref{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px}
+  .ref div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:14px}
+  .ref b{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.7px;font-weight:600;margin-bottom:2px}
+  .links a{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:8px 0;color:var(--text);text-decoration:none}
+  .links a:active{background:var(--panel2)}
+  .links .ic{flex:0 0 36px;height:36px;border-radius:9px;display:grid;place-items:center;font-size:12px;font-weight:800}
+  .links b{display:block}.links span{color:var(--muted);font-size:13px}
+  .links a::after{content:"\203A";margin-left:auto;color:var(--muted);font-size:22px}
+
+  /* log */
+  .quick{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:10px 0 14px}
+  .quick button{padding:14px 10px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;text-align:left}
+  .quick button:active{background:var(--panel2)}
+  .quick small{display:block;color:var(--muted);font-weight:400;font-size:12px;margin-top:2px}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+  .field label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
+  .field input,.field textarea{font:inherit;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--text)}
+  .field textarea{min-height:60px;resize:vertical}
+  .entry{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;display:flex;gap:10px;align-items:flex-start}
+  .entry time{flex:0 0 auto;font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700}
+  .entry .what{flex:1}.entry .what b{display:block}.entry .what span{color:var(--muted);font-size:14px}
+  .sharebox{background:var(--panel);border:1px solid var(--accent);border-radius:12px;padding:12px;margin-top:10px}
+  .sharegrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .sharegrid a,.sharegrid button{display:block;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;color:var(--text);text-decoration:none;font:inherit;cursor:pointer;min-height:44px}
+  .sharegrid b{display:block;font-size:15px}.sharegrid span{color:var(--muted);font-size:12.5px}
+  .entry .x{background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer;padding:0 4px}
+
+  /* chrome */
+  .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;background:rgba(15,17,21,.97);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+  .tabbar button{flex:1;background:none;border:0;color:var(--muted);padding:8px 2px 9px;font-size:11px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+  .tabbar svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .tabbar button.on{color:var(--accent)}
+  .fab{position:fixed;right:14px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:7;background:var(--accent);color:#141414;border:0;border-radius:999px;padding:11px 16px;font-weight:800;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.45);cursor:pointer;display:flex;align-items:center;gap:6px}
+  .fab .badge{background:#141414;color:var(--accent);border-radius:999px;font-size:11px;padding:0 6px}
+  body[data-v="v-log"] .fab{display:none}
+  .toast{position:fixed;left:50%;bottom:140px;transform:translateX(-50%);background:var(--text);color:#111;padding:8px 14px;border-radius:999px;font-weight:600;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;white-space:nowrap}
+  .toast.show{opacity:1}
+  @media (prefers-reduced-motion: reduce){ .dot{display:none} }
+  @media print{
+    :root{--bg:#fff;--panel:#fff;--panel2:#f1f1f1;--line:#bbb;--text:#111;--muted:#555}
+    header,.tabbar,.fab,.toast,.row,#v-log{display:none!important}
+    .view{display:block!important}
+    details.card,.group,.pod{break-inside:avoid}
+  }
+</style>
+</head>
+<body data-v="v-fix">
+<header>
+  <div class="brand">
+    <img src="icon.svg" alt="" style="width:30px;height:30px;align-self:center;border-radius:7px"><h1>DPGA Audio <span id="vtitle">Troubleshooting</span></h1>
+    <span class="sub">Updated 25 Nov 2026 · X32 Compact · S16 on AES50 B · Patch list v6.0</span>
+  </div>
+  <div class="hdr-tools" id="tools-fix">
+    <div class="search">
+      <input id="q" type="search" placeholder="Type a problem: feedback, no sound, stream…" autocomplete="off">
+      <button id="toggle" type="button">Open all</button>
+    </div>
+    <div class="chips" id="filters">
+      <button class="on" data-f="all">All</button>
+      <button data-f="house">No sound</button>
+      <button data-f="mic">Mics</button>
+      <button data-f="noise">Feedback &amp; noise</button>
+      <button data-f="mon">Monitors</button>
+      <button data-f="fx">FX</button>
+      <button data-f="stream">Stream</button>
+      <button data-f="power">Power</button>
+      <button data-f="normal">Normal quirks</button>
+    </div>
+  </div>
+  <div class="hdr-tools" id="tools-patch">
+    <div class="search"><input id="pq" type="search" placeholder="Channel number or name: 18, headset, BGV, bus 2…" autocomplete="off"></div>
+    <div class="chips" id="pfilters">
+      <button class="on" data-f="all">All</button>
+      <button data-f="in">Inputs</button>
+      <button data-f="aux">Aux in</button>
+      <button data-f="bus">Buses</button>
+      <button data-f="out">Outputs</button>
+      <button data-f="dca">DCAs</button>
+    </div>
+  </div>
+</header>
+
+<main>
+<!-- FIX -->
+<div class="view on" id="v-fix">
+  <div id="cards">
+
+    <details class="card" data-cat="house">
+      <summary><span class="tag t-house">No sound</span>Nothing coming out of the house speakers</summary>
+      <div class="body">
+        <div class="first"><b>First:</b> are the channel meters moving? Yes = check subgroups, Main LR, then everything after the console. No = before the console or the scene.</div>
+        <ol>
+          <li>Main LR fader up and not muted. No mute group button lit.</li>
+          <li>DCA faders up and unmuted.</li>
+          <li><b>Subgroups</b> up and unmuted: vocal subgroup (Bus 13/14), instrument subgroup (Bus 11/12) and drum subgroup (Bus 9/10). Main LR is fed from the buses, so a muted subgroup is silent in the house. A muted subgroup silences every channel on it.</li>
+          <li>Last DPGASunday scene loaded. Reloading resets mutes and faders to the saved starting point, as long as nothing was muted when the scene was saved.</li>
+          <li>S16 connected on <b>AES50 B</b> with steady link lights. Reseat the cable between songs. Don't move it to port A.</li>
+          <li>DriveRack powered, not muted, meters moving.</li>
+          <li>Both amps on: Crown (subs) and Gemini (mains). No protect or stuck clip lights.</li>
+          <li>Was everything powered in order? If not: amps off, check S16 + DriveRack, then amps on again.</li>
+        </ol>
+        <p class="note">The amps, S16 and DriveRack are in the equipment room, not at FOH. Signal path: X32 Main LR › S16 outputs › DriveRack › amps › speakers.</p>
+      </div>
+    </details>
+
+    <details class="card" data-cat="house">
+      <summary><span class="tag t-house">No sound</span>Mics and instruments silent, but the laptop and aux inputs still work</summary>
+      <div class="body">
+        <div class="first"><b>First:</b> check the routing is on <b>REC</b>, not PLAY. In PLAY the channels listen to the card instead of the stage, so every mic and instrument goes quiet. The aux inputs (laptop, USB) aren't affected, which is the giveaway.</div>
+        <ol>
+          <li>Press <b>ROUTING</b> on the X32.</li>
+          <li>On the routing screen, turn the <b>rightmost knob</b> to select <b>REC</b>.</li>
+          <li><b>Push the knob in</b> to confirm.</li>
+        </ol>
+        <p class="note">Reloading the scene won't fix this. Routing is scene-safed, so PLAY/REC stays wherever it was last left. PLAY is only for virtual soundchecks.</p>
+      </div>
+    </details>
+    <details class="card" data-cat="house">
+      <summary><span class="tag t-house">No sound</span>Only the subs (or only the tops) are missing</summary>
+      <div class="body">
+        <ul>
+          <li><b>No subs:</b> check the Crown Macro-Tech power and that it isn't in protect.</li>
+          <li><b>No tops:</b> check the Gemini XGA-3000 power and that it isn't in protect.</li>
+          <li>Amp hot or shutting down? Check the equipment room AC is on (it gets switched off on generator).</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="card" data-cat="house">
+      <summary><span class="tag t-house">No sound</span>Video, promo or playback has no sound</summary>
+      <div class="body">
+        <ul>
+          <li><b>Videos / promos:</b> AUX 1 (Visuals Laptop) unmuted and fader up. Check the laptop's volume and its cable.</li>
+          <li><b>Computer playback:</b> AUX 5/6 (Card IN, over the USB cable).</li>
+          <li><b>USB drive playback:</b> AUX 7/8 (USB L/R).</li>
+          <li>Ask the media team for a heads-up before any video plays.</li>
+        </ul>
+        <p class="note">AUX 3/4 (Stream Return) is for Zoom only and stays muted on Sundays, or the stream echoes.</p>
+      </div>
+    </details>
+
+    <details class="card" data-cat="mic">
+      <summary><span class="tag t-mic">Mics</span>One mic has no sound, but its meter is moving</summary>
+      <div class="body">
+        <ol>
+          <li>Channel unmuted, fader up.</li>
+          <li>Its DCA (3, 4, 5 or 8) up and unmuted.</li>
+          <li>No mute group lit. BGVs and the lead are often muted on purpose at the podium. Unmute the <b>lead first</b>, then the BGVs.</li>
+          <li>Its subgroup up and unmuted: Bus 13/14 for vocals (podium mic too), the instrument subgroup (Bus 11/12) for the band. Vocals also need their send to Bus 13/14 on.</li>
+        </ol>
+      </div>
+    </details>
+
+    <details class="card" data-cat="mic">
+      <summary><span class="tag t-mic">Mics</span>One mic has no sound and no meter</summary>
+      <div class="body">
+        <ol>
+          <li><b>Wireless:</b> receiver on, mic switched on, battery good, RF meter showing signal.</li>
+          <li><b>Corded:</b> cable seated at the mic and the stage box; phantom on if it's a condenser.</li>
+          <li><b>Instrument:</b> DI connected and the instrument actually sending (keys are a stereo pair).</li>
+          <li>Still nothing: hand them a spare corded mic. Don't re-patch during service.</li>
+        </ol>
+      </div>
+    </details>
+
+    <details class="card" data-cat="mic">
+      <summary><span class="tag t-mic">Mics</span>Wireless mic cutting in and out</summary>
+      <div class="body">
+        <ul>
+          <li><b>Battery meter low:</b> swap batteries between songs. Fresh ones every Sunday.</li>
+          <li><b>Drops when the singer moves:</b> clear the antennas, keep line of sight to the receivers, watch the RF meter.</li>
+          <li><b>Battery and RF fine:</b> hand them a corded mic; check the wireless after service.</li>
+          <li><b>Went quiet during a speaking part:</b> it was muted on purpose for feedback. Unmute before the next song.</li>
+        </ul>
+        <div class="first ok"><b>Always:</b> note the time and which mic. The pattern finds the cause.</div>
+      </div>
+    </details>
+
+    <details class="card" data-cat="noise">
+      <summary><span class="tag t-noise">Feedback</span>Squealing while someone speaks at the podium</summary>
+      <div class="body">
+        <div class="first"><b>First:</b> mute the BGVs (and the lead if needed).</div>
+        <ol>
+          <li>Lower the podium mic's monitor send.</li>
+          <li>Ask the speaker to stay about a hand-width from the mic and pointed at their mouth.</li>
+          <li>Unmute lead, then BGVs, before the next song.</li>
+        </ol>
+        <p class="note">Never boost EQ to fix feedback. Pull the level down first.</p>
+      </div>
+    </details>
+
+    <details class="card" data-cat="noise">
+      <summary><span class="tag t-noise">Feedback</span>Squealing during singing, or from the headset</summary>
+      <div class="body">
+        <div class="first"><b>First:</b> pull down the fader of the mic that's ringing.</div>
+        <ul>
+          <li>Lower that mic's Bus 1 (wedge) send; keep wedges pointed away from the mic.</li>
+          <li><b>Headset (ch18):</b> lower it a few dB and its monitor send; mic near the mouth, not the chest.</li>
+          <li>A mic nobody is using is ringing? Mute it until it's needed.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="card" data-cat="noise">
+      <summary><span class="tag t-noise">Distortion</span>Harsh, crunchy or clipping sound</summary>
+      <div class="body">
+        <ul>
+          <li><b>One channel:</b> meter in red = gain too high. Lower it toward −18 dB.</li>
+          <li><b>Snare / drums hitting red:</b> lower the drum gain; bring the drum DCA down if the room is too loud.</li>
+          <li><b>Band distorts after song one:</b> they played softer at setup. Lower gains now; ask for full service level at setup next time.</li>
+          <li><b>Everything:</b> Main LR in red. Lower Main LR or DCAs; check the amp clip lights.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="card" data-cat="noise">
+      <summary><span class="tag t-noise">Noise</span>Hum, buzz, pops or clicks</summary>
+      <div class="body">
+        <ul>
+          <li><b>Hum on one instrument:</b> try the DI's ground lift; check the cable.</li>
+          <li><b>Hum on everything:</b> usually power (generator, fans). Note the time and what was just switched on.</li>
+          <li><b>Pops or clicks on all channels:</b> the AES50 link to the S16. Note the time; check the AES50 B cable is fully seated (between songs).</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="card" data-cat="fx">
+      <summary><span class="tag t-fx">FX</span>No vocal delay, or the delay sounds wrong</summary>
+      <div class="body">
+        <div class="first"><b>First:</b> the vocal delay is FX4 (Stereo Delay). It's fed by Bus 7 (Delay2) and comes back on the FX 4L/4R returns into the vocal subgroup. A mute anywhere along that path kills it.</div>
+        <p><b>No delay at all</b></p>
+        <ol>
+          <li><b>DCA 7</b> (Delay2) unmuted and up. It's muted in the scene.</li>
+          <li><b>FX 4L/4R returns</b> unmuted, faders up.</li>
+          <li><b>Bus 7</b> (Delay2) unmuted, fader up.</li>
+          <li>The lead and BGV channels' <b>sends to Bus 7</b> are up. They're post-fader, so a muted or pulled-down vocal sends no delay either.</li>
+        </ol>
+        <p><b>Delay sounds wrong</b></p>
+        <ul>
+          <li><b>Out of time:</b> tap the tempo on button <kbd>#4</kbd>.</li>
+          <li><b>Too much, or messy:</b> lower DCA 7, or mute it for that song.</li>
+          <li><b>Echo on someone's speech:</b> mute DCA 7 while they talk.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="card" data-cat="mon">
+      <summary><span class="tag t-mon">Monitors</span>Singers can't hear themselves</summary>
+      <div class="body">
+        <ul>
+          <li>Raise their sends to Bus 1. Lead sits about 3–5 dB above the BGVs.</li>
+          <li>Both wedges silent: Bus 1 up and unmuted, wedges powered, daisy-chain cable between the two JBLs connected.</li>
+          <li>One wedge silent: check the link cable between the two wedges.</li>
+          <li>Musicians' in-ears: see the next card.</li>
+        </ul>
+        <div class="signals">
+          <div>☝ self + up = more of me</div>
+          <div>☝ self + down = less of me</div>
+          <div>☝ band + up = more music</div>
+          <div>👍 = all good</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="card" data-cat="mon">
+      <summary><span class="tag t-mon">Monitors</span>Musician's in-ears silent, or missing something</summary>
+      <div class="body">
+        <div class="first"><b>First:</b> is it one musician, or every in-ear at once? Every in-ear at once points to the AES50 B link to the S16.</div>
+        <p><b>One musician's whole mix is silent</b></p>
+        <ol>
+          <li>Their bus is unmuted with the fader up: <b>Bus 3</b> Drums, <b>4</b> Keys, <b>5</b> Bass, <b>6</b> Extra.</li>
+          <li><b>Bus 6 is muted in the scene:</b> unmute it whenever someone is on it.</li>
+          <li>DCA 6 (stage monitors) is up and no mute group is lit.</li>
+          <li>The cable from their S16 output (3 drums, 4 keys, 5 bass, 6 extra) to their in-ear amp is plugged in at both ends.</li>
+          <li>Their in-ear amp is powered with the volume up.</li>
+        </ol>
+        <p><b>One instrument or voice missing from their mix</b></p>
+        <ul>
+          <li>Raise that channel's send to their bus. Sends are pre-fader, so moving the house fader won't change their mix.</li>
+          <li>If they mix themselves on the app, check they haven't turned it down on their own phone.</li>
+        </ul>
+        <p><b>Talkback</b></p>
+        <ul>
+          <li><b>Can't hear the keys player or drummer at the desk:</b> TB1–3 (ch 12–14) unmuted, and the M/C bus up.</li>
+          <li><b>Band can't hear you:</b> the talkback mic is plugged into the X32's talkback socket. <b>Talk A</b> goes to the musicians (Buses 3–6), <b>Talk B</b> to the singers' wedges (Bus 1).</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="card" data-cat="stream">
+      <summary><span class="tag t-stream">Stream</span>No audio on the livestream</summary>
+      <div class="body">
+        <div class="first"><b>First:</b> solo MTX 1/2. Is the meter moving?</div>
+        <ul>
+          <li><b>Yes:</b> the problem is downstream. Ask the media team to check vMix first, and the ATEM last.</li>
+          <li><b>No:</b> MTX 1/2 unmuted and fader up.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="card" data-cat="stream">
+      <summary><span class="tag t-stream">Stream</span>Stream sounds distorted</summary>
+      <div class="body">
+        <ol>
+          <li>MTX 1/2 not in the red. Lower it if it's clipping.</li>
+          <li>Ask media to check the vMix input and master levels.</li>
+          <li>Last: ATEM Mic 1 input set to <b>line</b> level (mic level caused distortion before). Don't change the ATEM master (it stays at −9 dB).</li>
+        </ol>
+      </div>
+    </details>
+
+    <details class="card" data-cat="stream">
+      <summary><span class="tag t-stream">Stream</span>Vocals too loud or buried online, or speech too quiet</summary>
+      <div class="body">
+        <ul>
+          <li>Press <kbd>#8</kbd> (Sends on Fader: Stream) and adjust the Bus 13/14 send. This leaves the house alone. <b>Press #8 again to turn it off</b>, or the faders keep controlling the stream instead of the house.</li>
+          <li>Speech too quiet: run MTX 1/2 around −5 dB in P&amp;W, raise it for speech.</li>
+          <li>Listen on headphones <b>and</b> a phone speaker.</li>
+        </ul>
+        <p class="note">The stream comes off the house buses, so house fader moves change the stream too.</p>
+      </div>
+    </details>
+
+    <details class="card" data-cat="stream">
+      <summary><span class="tag t-stream">Stream</span>Echo, doubling, fan noise or phasey sound online</summary>
+      <div class="body">
+        <ul>
+          <li><b>Echo / doubled audio:</b> mute AUX 3/4 (Stream Return). It's only for Zoom meetings.</li>
+          <li><b>Fan noise or phasey sound:</b> keep the crowd mic (DCA 8) down in P&amp;W. Open it for the welcome and the responsive scripture reading.</li>
+          <li><b>Chat says audio dropped:</b> get the time from media and log it.</li>
+        </ul>
+        <p class="note">After service, ask media to check stream health in YouTube Studio's Live Control Room.</p>
+      </div>
+    </details>
+
+    <details class="card" data-cat="power">
+      <summary><span class="tag t-power">Power</span>Power cut or switch to generator</summary>
+      <div class="body">
+        <div class="first"><b>First:</b> switch off both amps so nothing pops when power comes back.</div>
+        <ol>
+          <li>Wait for the generator or mains to settle.</li>
+          <li>Make sure the equipment room AC is on, or the amps can overheat.</li>
+          <li>Power up in order: X32 › receivers + keys › S16 › DriveRack › both amps › stage monitors.</li>
+          <li>Load the last DPGASunday scene; check the S16 link on AES50 B.</li>
+          <li>Check the stream with media; log the time.</li>
+        </ol>
+        <p class="note">Lights flicker when the fans come on. If audio glitches at the same moment, write it down.</p>
+      </div>
+    </details>
+
+    <details class="card" data-cat="power">
+      <summary><span class="tag t-power">Power</span>X32 froze or restarted</summary>
+      <div class="body">
+        <ol>
+          <li>Bring the amps down or off if there's noise.</li>
+          <li>Let it boot, then reload the last DPGASunday scene. Routing is scene-safed, so PLAY/REC won't change: check it's on REC.</li>
+          <li>Recheck: vocal delay muted, BGVs about 6 dB under the lead.</li>
+          <li>Note the time for the Weekly Log.</li>
+        </ol>
+      </div>
+    </details>
+
+    <details class="card" data-cat="normal">
+      <summary><span class="tag t-normal">Normal</span>Things that look wrong but are expected</summary>
+      <div class="body">
+        <ul>
+          <li>Tom 1 (ch4) is muted: nothing is plugged into it.</li>
+          <li>BGV channels 19–22 are unnamed on purpose.</li>
+          <li>AUX 3/4 (Stream Return) is muted on Sundays.</li>
+          <li>The console reverb isn't working properly; the stereo delay is used instead (starts muted, tap on #4).</li>
+          <li>Virtual soundcheck gains don't carry over; set gains live on Sunday.</li>
+          <li>Both subs sit together on the left.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="card" data-cat="normal">
+      <summary><span class="tag t-normal">After</span>Logging a problem</summary>
+      <div class="body">
+        <p>In the Weekly Log, write: the <b>time</b>, the <b>symptom</b>, which <b>channel or mic</b>, <b>what you did</b>, and <b>whether it worked</b>.</p>
+        <p class="note">Don't log normal fader and gain moves.</p>
+      </div>
+    </details>
+
+  </div>
+  <div class="empty" id="empty">No match. Try a simpler word, or check the golden rules under More.</div>
+</div>
+
+<!-- SUNDAY CHECKLIST -->
+<div class="view" id="v-sun">
+  <div class="section-title">Sunday checklist <span id="sunDate"></span></div>
+  <div class="prog"><div class="bar"><i id="pbar"></i></div><b id="pcount">0/0</b></div>
+  <p class="note" style="margin:2px 2px 0">Ticks are saved on this phone and clear automatically each new week.</p>
+  <div id="checklist"></div>
+  <div class="row"><button class="btn danger" id="resetCk">Reset checklist</button></div>
+</div>
+
+<!-- PODIUM -->
+<div class="view" id="v-pod">
+  <div class="pod up">
+    <h2>Speaker steps up</h2>
+    <p class="lead">Do this before they start talking, so the podium mic doesn't feed back.</p>
+    <div class="step"><div class="n">1</div><div><b><span class="dca mute">DCA 5</span>Mute BGVs</b><span>All BGVs, ch 19–22</span></div></div>
+    <div class="step"><div class="n">2</div><div><b><span class="dca mute">DCA 4</span>Mute lead (if needed)</b><span>Lead vox ch 23–24. Keep it open if the leader is talking</span></div></div>
+    <div class="step"><div class="n">3</div><div><b><span class="dca mute">DCA 7</span>Mute delay</b><span>So the speech has no echo FX</span></div></div>
+    <div class="step"><div class="n">4</div><div><b><span class="dca up">DCA 3</span>Speaking mic up</b><span>Podium ch 17 · Headset ch 18. Lower its wedge send if it rings</span></div></div>
+  </div>
+  <div class="pod back">
+    <h2>Back to singing</h2>
+    <p class="lead">Before the next song starts.</p>
+    <div class="step"><div class="n">1</div><div><b><span class="dca unmute">DCA 4</span>Unmute lead first</b><span>The leader often starts the song</span></div></div>
+    <div class="step"><div class="n">2</div><div><b><span class="dca unmute">DCA 5</span>Then unmute BGVs</b><span>BGVs sit about 6 dB under the lead</span></div></div>
+    <div class="step"><div class="n">3</div><div><b><span class="dca unmute">DCA 7</span>Delay back (if used)</b><span>Tap tempo on <kbd>#4</kbd></span></div></div>
+    <div class="step"><div class="n">4</div><div><b><span class="dca up">DCA 3</span>Speaking mic: leave or lower</b><span>Some preachers talk during the singing, so DCA 3 may need to stay open</span></div></div>
+  </div>
+</div>
+
+<!-- PATCH -->
+<div class="view" id="v-patch">
+  <div id="patch"></div>
+  <div class="empty" id="pempty">Nothing matches. Try a number like 18, or a word like "BGV".</div>
+  <div class="tip"><b>Post-fader</b> sends follow your channel and bus faders (the stream matrix). <b>Pre-fader</b> sends ignore them (monitor mixes), so the musicians' levels stay put. Set input gain once, then leave it: it changes everyone's monitors too.</div>
+</div>
+
+<!-- FLOW -->
+<div class="view" id="v-flow">
+  <p class="note" style="margin:4px 2px 10px">Follow the moving dots to see where the sound goes. Tap any box to see what to check if the sound stops there.</p>
+  <div class="flowbox" id="flowbox">
+    <svg id="flow" viewBox="0 0 360 712" role="img" aria-label="DPGA signal flow diagram">
+      <path id="L-house" class="lane" stroke="#e0a526" d="M95 34 V682"/>
+      <path id="L-house2" class="lane" stroke="#e0a526" d="M265 34 V140 H95 V682"/>
+      <path id="L-aux" class="lane" stroke="#e0a526" d="M265 176 V212 H95 V682"/>
+      <path id="L-zoom" class="lane" stroke="#4fc3d9" stroke-dasharray="5 5" d="M340 176 H352 V280 H8 V394 H20"/>
+      <path id="L-stream" class="lane" stroke="#a77bf3" d="M95 34 V318 H265 V612"/>
+      <path id="L-mon" class="lane" stroke="#4caf7a" d="M265 34 V140 H95 V248 H265"/>
+      <g id="dots"></g>
+      <g id="nodes"></g>
+    </svg>
+  </div>
+  <div class="legend"><span><i style="background:#e0a526"></i>House (room)</span><span><i style="background:#a77bf3"></i>Stream (online)</span><span><i style="background:#4caf7a"></i>Monitors (stage)</span><span><i style="background:#4fc3d9"></i>AUX 3/4 Zoom (LR only, muted Sundays)</span></div>
+  <div class="info" id="finfo"><h4>Tap a box</h4><p class="note">Each one shows what it does and what to check when the sound stops there.</p></div>
+  <div class="row">
+    <button class="btn primary" id="trace">Trace step by step</button>
+    <button class="btn" id="pause">Pause dots</button>
+  </div>
+</div>
+
+<!-- MORE -->
+<div class="view" id="v-more">
+  <div class="section-title">Links</div>
+  <div class="links">
+    <div class="links-static" id="getlink" style="display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:8px 0"><div class="ic" style="background:#173023;color:#8fdcaa;flex:0 0 36px;height:36px;border-radius:9px;display:grid;place-items:center;font-size:12px;font-weight:800">APP</div><div><b style="display:block">Install on your phone</b><span style="color:var(--muted);font-size:13px">iPhone: Share › Add to Home Screen. Android: ⋮ › Install app. Works offline after the first open.</span><button type="button" class="btn primary" id="installBtn" hidden style="margin-top:8px">Install app</button></div></div>
+    <a href="https://drive.google.com/drive/folders/1Vy2lDJ0ifaLqPwRojt5lhpobuuIRiIMP" target="_blank" rel="noopener"><div class="ic" style="background:#1d2c3d;color:#9cc7f0">DRV</div><div><b>DPGA SOUND folder</b><span>SOPs, patch lists, scenes (Google Drive)</span></div></a>
+    <a href="https://drive.google.com/file/d/1z9qFIWczu5CZr0tsoKY8AKbcCX8QJLsg/view" target="_blank" rel="noopener"><div class="ic" style="background:#3a1f1f;color:#ff9b94">PDF</div><div><b>X32 Patch List v6.0</b><span>Updated Nov 21, 2026</span></div></a>
+    <a href="https://forms.gle/hjPLP8X3EfHom3i26" target="_blank" rel="noopener"><div class="ic" style="background:#2e2340;color:#c9a8f5">FORM</div><div><b>Pulse check</b><span>Feedback form, the one pinned in the stream chat</span></div></a>
+  </div>
+  <p class="note" style="margin:2px 2px 0">Drive links need internet and need the folder shared with you. Everything else in this app works offline.</p>
+
+  <div class="section-title">Golden rules</div>
+  <section class="rules">
+    <ol>
+      <li><b>Keep the service going.</b> Pull the problem down first (mute or lower it), then fix it.</li>
+      <li><b>Look before you touch.</b> Check the channel meter: signal or no signal tells you where to look.</li>
+      <li><b>One change at a time.</b> Change one thing, listen, then decide.</li>
+      <li><b>Don't touch routing.</b> No changes to User In patching, AES50, the ATEM or vMix during service.</li>
+      <li><b>Write down the time</b> of every dropout, pop or squeal. Use the Log button.</li>
+      <li><b>Ask early.</b> Omar on keys? Use talkback. Otherwise message him after the song.</li>
+    </ol>
+  </section>
+
+  <div class="section-title">Quick reference</div>
+  <div class="ref">
+    <div><b>Power on</b>X32 › receivers + keys › S16 › DriveRack › both amps › stage monitors</div>
+    <div><b>Power off</b>Stage monitors › both amps › DriveRack › S16 › receivers + keys › X32</div>
+    <div><b>Scene</b>Load the last DPGASunday scene</div>
+    <div><b>Gain target</b>About −18 dB (green turning to 1 bar of yellow)</div>
+    <div><b>DCAs</b>1 Drums · 2 Instr · 3 Speaking · 4 Lead · 5 BGVs · 6 Wedges · 7 Delay · 8 Crowd</div>
+    <div><b>Buses into Main + stream</b>8 Aux · 9/10 Drums · 11/12 Instruments · 13/14 Vocals · 15/16 Drum PComp</div>
+    <div><b>Monitors</b>Bus 1 Wedges · 3 Drums · 4 Keys · 5 Bass · 6 Extra (all pre-fader)</div>
+    <div><b>Stream</b>MTX 1/2 (solo to listen) · Bus 2 Crowd · AUX 3/4 muted</div>
+    <div><b>User buttons</b>#4 delay tap tempo · #8 Sends on Fader: Stream</div>
+  </div>
+</div>
+
+<!-- LOG -->
+<div class="view" id="v-log">
+  <div class="section-title">Log a problem <span class="note" id="clock"></span></div>
+  <p class="note" style="margin:0 2px">Tap the moment it happens. Times are saved on this phone. After service, tap Share log to send them to the sound team.</p>
+  <div class="field" style="margin-top:12px"><label for="lch">Channel / mic (optional)</label><input id="lch" placeholder="e.g. Lead wireless, ch18 headset, BGV 2"></div>
+  <div class="quick" id="quick">
+    <button data-k="Mic dropout">Mic dropout<small>cut out / battery / RF</small></button>
+    <button data-k="Feedback">Feedback<small>squeal or ring</small></button>
+    <button data-k="Pops / clicks">Pops / clicks<small>all channels</small></button>
+    <button data-k="Distortion">Distortion<small>clipping, harsh</small></button>
+    <button data-k="Hum / buzz">Hum / buzz<small>one or all</small></button>
+    <button data-k="Stream issue">Stream issue<small>dropped, distorted, echo</small></button>
+    <button data-k="Power cut / flicker">Power cut / flicker<small>generator, fans</small></button>
+    <button data-k="Monitor issue">Monitor issue<small>wedges / in-ears</small></button>
+  </div>
+  <div class="field"><label for="lnote">Note or what you did (optional)</label><textarea id="lnote" placeholder="e.g. Swapped batteries after song 2, fixed"></textarea></div>
+  <div class="row" style="margin-top:0"><button class="btn primary" id="addOther">Log note now</button></div>
+  <div class="section-title">Entries</div>
+  <div id="entries"></div>
+  <div class="empty" id="noent" style="display:block;padding:14px">Nothing logged yet.</div>
+  <div class="sharebox" id="sharebox" hidden>
+    <p class="note" style="margin:0 0 8px">Send the log to:</p>
+    <div class="sharegrid">
+      <a id="shWa" target="_blank" rel="noopener"><b>WhatsApp</b><span>pick a chat or group</span></a>
+      <a id="shSms"><b>Text message</b><span>SMS</span></a>
+      <a id="shMail"><b>Email</b><span>your mail app</span></a>
+      <button type="button" id="shCopy"><b>Copy</b><span>paste anywhere</span></button>
+    </div>
+  </div>
+  <div class="row">
+    <button class="btn primary" id="shareLog">Share log</button>
+    <button class="btn" id="copyLog">Copy</button>
+    <button class="btn danger" id="clearLog">Clear log</button>
+  </div>
+</div>
+</main>
+
+<button class="fab" id="fab" type="button">⏱ Log <span class="badge" id="badge" hidden></span></button>
+
+<nav class="tabbar" id="tabbar">
+  <button data-v="v-fix" data-t="Troubleshooting" class="on"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>Fix it</button>
+  <button data-v="v-sun" data-t="Sunday checklist"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>Sunday</button>
+  <button data-v="v-pod" data-t="Podium"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg>Podium</button>
+  <button data-v="v-patch" data-t="Patch list"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="10" cy="18" r="1.5"/></svg>Patch</button>
+  <button data-v="v-flow" data-t="Signal flow"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M5 8v2a4 4 0 0 0 4 4h3v2M19 8v2a4 4 0 0 1-4 4h-3"/></svg>Flow</button>
+  <button data-v="v-more" data-t="Links &amp; reference"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>More</button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  function $(id){return document.getElementById(id);}
+  function store(k,v){try{ if(v===undefined) return JSON.parse(localStorage.getItem(k)||'null'); localStorage.setItem(k,JSON.stringify(v)); }catch(e){ return null; }}
+  function esc(x){return String(x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function toast(m){var t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('show');},1500);}
+  function hhmm(t){var d=new Date(t);return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
+
+  function twoTap(btn,label,fn){btn.addEventListener('click',function(){if(btn._armed){clearTimeout(btn._armed);btn._armed=null;btn.textContent=label;fn();return;}btn.textContent='Tap again to confirm';btn._armed=setTimeout(function(){btn._armed=null;btn.textContent=label;},3000);});}
+
+  /* ---------- tabs ---------- */
+  var tabbar=$('tabbar');
+  function show(v){
+    [].forEach.call(document.querySelectorAll('.view'),function(x){x.classList.toggle('on',x.id===v);});
+    var title='Log';
+    [].forEach.call(tabbar.children,function(b){var on=b.dataset.v===v;b.classList.toggle('on',on);if(on)title=b.dataset.t;});
+    $('vtitle').innerHTML=title; document.body.dataset.v=v; window.scrollTo(0,0);
+    if(v==='v-flow') startFlow(); else stopTrace();
+  }
+  tabbar.addEventListener('click',function(e){var b=e.target.closest('button');if(b)show(b.dataset.v);});
+  $('fab').addEventListener('click',function(){show('v-log');});
+
+  /* ---------- troubleshooting ---------- */
+  var q=$('q'),cards=[].slice.call(document.querySelectorAll('details.card')),filt='all',toggle=$('toggle');
+  cards.forEach(function(c){c._text=c.textContent.toLowerCase();});
+  function applyFix(){
+    var term=q.value.trim().toLowerCase(),shown=0;
+    cards.forEach(function(c){
+      var ok=(filt==='all'||c.dataset.cat===filt)&&(!term||term.split(/\s+/).every(function(w){return c._text.indexOf(w)>-1;}));
+      c.style.display=ok?'':'none'; if(ok){shown++; if(term)c.open=true;}
+    });
+    $('empty').style.display=shown?'none':'block';
+  }
+  q.addEventListener('input',applyFix);
+  $('filters').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call(this.children,function(x){x.classList.remove('on');});b.classList.add('on');filt=b.dataset.f;applyFix();});
+  toggle.addEventListener('click',function(){var open=toggle.textContent==='Open all';cards.forEach(function(c){if(c.style.display!=='none')c.open=open;});toggle.textContent=open?'Close all':'Open all';});
+  window.addEventListener('beforeprint',function(){cards.forEach(function(c){c.open=true;c.style.display='';});});
+
+  /* ---------- Sunday checklist ---------- */
+  var CK=[
+    ['Power on, in order',[
+      ['X32 first','Then load the last DPGASunday scene'],
+      ['Routing on REC, not PLAY','Routing screen: turn the rightmost knob to REC, push to confirm. The scene won\u2019t change it'],
+      ['Mic receivers + keyboard',''],
+      ['S16 stage box','Check the AES50 B link lights are steady'],
+      ['DriveRack',''],
+      ['Both amps','Crown (subs) and Gemini (mains). Equipment room AC on'],
+      ['Stage monitors','']]],
+    ['Before the room fills',[
+      ['Vocal delay muted to start','Tap tempo on button #4 when you use it'],
+      ['DCA 4 lead and DCA 5 BGVs at starting levels','BGVs about 6 dB below the lead'],
+      ['AUX 3/4 Stream Return muted','Only used for Zoom meetings'],
+      ['Fresh batteries in every wireless mic','3 wireless + 2 corded'],
+      ['Antennas clear, RF and battery meters checked',''],
+      ['Arrived 60 minutes early (30 minimum)','']]],
+    ['During the opening song',[
+      ['Gains set by the meters','About −18 dB, leave room for louder songs. Then leave the gain alone'],
+      ['Snare never hits red','']]],
+    ['During the first P&W song',[
+      ['Sends on Fader on: button #8 (Stream)',''],
+      ['Bus 13/14 vocal send to the stream set','Headphones on, MTX 1/2 soloed'],
+      ['Sends on Fader off: press #8 again','Otherwise the faders keep moving the stream, not the house'],
+      ['Stream checked on a phone speaker too','']]],
+    ['Podium segments',[
+      ['BGVs (and lead if needed) muted when someone speaks','See the Podium tab'],
+      ['Unmuted before the next song','Lead first, then BGVs']]],
+    ['After service',[
+      ['Stream health checked in YouTube Studio Live Control Room','With the media team'],
+      ['Wireless mics collected for battery change',''],
+      ['Weekly Log filled in, with why you made each change','Share your Log entries with the sound team'],
+      ['Powered down in reverse order','Monitors › amps › DriveRack › S16 › receivers + keys › X32']]]
+  ];
+  function weekKey(){var d=new Date();var day=(d.getDay()+6)%7;d.setHours(0,0,0,0);d.setDate(d.getDate()-day);return d.toISOString().slice(0,10);}
+  function sundayLabel(){var d=new Date();d.setDate(d.getDate()+((7-d.getDay())%7));return '· Sun '+d.toLocaleDateString(undefined,{day:'numeric',month:'short'});}
+  var ckState=store('dpga-ck')||{};
+  if(ckState.week!==weekKey()) ckState={week:weekKey(),done:{}};
+  function renderCk(){
+    var html='',total=0,done=0;
+    CK.forEach(function(g,gi){
+      var gd=0;var items=g[1].map(function(it,ii){var id=gi+'-'+ii,on=!!ckState.done[id];total++;if(on){done++;gd++;}
+        return '<div class="ck'+(on?' done':'')+'" data-id="'+id+'" role="checkbox" aria-checked="'+on+'" tabindex="0"><div class="box"></div><div class="txt">'+esc(it[0])+(it[1]?'<small>'+esc(it[1])+'</small>':'')+'</div></div>';}).join('');
+      html+='<div class="group"><h3>'+esc(g[0])+'<span>'+gd+'/'+g[1].length+'</span></h3>'+items+'</div>';
+    });
+    $('checklist').innerHTML=html; $('pcount').textContent=done+'/'+total; $('pbar').style.width=(total?done/total*100:0)+'%';
+    $('sunDate').textContent=sundayLabel();
+  }
+  $('checklist').addEventListener('click',function(e){var r=e.target.closest('.ck');if(!r)return;var id=r.dataset.id;if(ckState.done[id])delete ckState.done[id];else ckState.done[id]=Date.now();store('dpga-ck',ckState);renderCk();});
+  $('checklist').addEventListener('keydown',function(e){if(e.key===' '||e.key==='Enter'){var r=e.target.closest('.ck');if(r){e.preventDefault();r.click();}}});
+  twoTap($('resetCk'),'Reset checklist',function(){ckState={week:weekKey(),done:{}};store('dpga-ck',ckState);renderCk();toast('Checklist cleared');});
+  renderCk();
+
+  /* ---------- Patch list v6.0 ---------- */
+  var P={
+    in:{t:'Input channels',h:['Ch','Name / source','Notes'],r:[
+      ['01','Kick','DRUMS','Local XLR 1','Gate on, wave shaper insert'],
+      ['02','Snare','DRUMS','Local XLR 2','Gate on, wave shaper insert'],
+      ['03','Hi-Hat','DRUMS','Local XLR 3','Gate on, phantom ON'],
+      ['04','Tom 1','DRUMS','Local XLR 4','Gate on. Muted in scene: nothing plugged in'],
+      ['05','Tom 2','DRUMS','Local XLR 5','Gate on'],
+      ['06','Tom 3','DRUMS','Local XLR 6','Gate on'],
+      ['07','Tom 4','DRUMS','Local XLR 7','Gate on'],
+      ['08','Tom 5','DRUMS','Local XLR 8','Gate on'],
+      ['09','Bass Lo','INSTR','Local XLR 9','Low frequencies'],
+      ['10','Bass Hi','INSTR','Local XLR 9','Same source as ch 9, high frequencies'],
+      ['12','TB1','TALKBACK','Local XLR 12','Talkback 1'],
+      ['13','TB2','TALKBACK','Local XLR 13','Talkback 2'],
+      ['14','TB3','TALKBACK','Local XLR 14','Talkback 3'],
+      ['15','Keys L','INSTR','Local XLR 15','Linked with ch 16, hard left'],
+      ['16','Keys R','INSTR','Local XLR 16','Linked with ch 15, hard right'],
+      ['17','Podium','SPEAKING','AES50B ch 1','Centre · DCA 3'],
+      ['18','Headset','SPEAKING','AES50B ch 2','Centre · DCA 3 · sermon mic'],
+      ['19','BGV','VOX','AES50B ch 3','Slight L/R · DCA 5'],
+      ['20','BGV','VOX','AES50B ch 4','Slight L/R · DCA 5'],
+      ['21','BGV','VOX','AES50B ch 5','Centre · DCA 5'],
+      ['22','BGV','VOX','AES50B ch 6','Slight L/R · DCA 5'],
+      ['23','Lead Vox 1','VOX','AES50B ch 7','Centre · DCA 4'],
+      ['24','Lead Vox 2','VOX','AES50B ch 8','A BGV, not a lead · slight L/R · DCA 4'],
+      ['25','Skit Mic','STAGE','UserIN17 → AES50B ch 9','Phantom ON · FOH and Crowd bus only'],
+      ['26','(unused)','MISC','UserIN18 → Card In 26',''],
+      ['27','Crowd 1','AMBIENT','Same source as ch 25','Hard left · Crowd bus only · DCA 8'],
+      ['28','Crowd 2','AMBIENT','Same source as ch 25','Hard right · Crowd bus only · DCA 8'],
+      ['29','(unused)','MISC','UserIN21 → Card In 29',''],
+      ['30','(unused)','MISC','UserIN22 → Card In 30',''],
+      ['31','(unused)','MISC','UserIN23 → Card In 31',''],
+      ['32','(unused)','MISC','UserIN24 → Card In 32','']]},
+    aux:{t:'Aux inputs',h:['Aux','Name','Notes'],r:[
+      ['AUX 1','Visuals Laptop','','','Video/promo audio from the media team'],
+      ['AUX 2','(unused)','','',''],
+      ['AUX 3','Stream Return L','','','Linked with AUX 4 · Zoom (Bible study) · LR only · muted Sundays'],
+      ['AUX 4','Stream Return R','','','Linked with AUX 3 · Zoom (Bible study) · LR only · muted Sundays'],
+      ['AUX 5','Card IN 1','','','USB playback, linked with AUX 6'],
+      ['AUX 6','Card IN 2','','','USB playback, linked with AUX 5'],
+      ['AUX 7','USB L','','','USB drive playback, linked pair'],
+      ['AUX 8','USB R','','','USB drive playback, linked pair']]},
+    bus:{t:'Mix buses',h:['Bus','Name','Purpose'],r:[
+      ['Bus 1','Wedge L','','','Singers’ floor wedges 1 and 2 · pre-fader'],
+      ['Bus 2','Crowd Mic','','','Crowd processing · post-fader · ducked by the vox subgroup · stream MTX only'],
+      ['Bus 3','Drums','','','Drum monitor mix · pre-fader'],
+      ['Bus 4','Keys','','','Keys monitor mix · pre-fader'],
+      ['Bus 5','Bass','','','Bass monitor mix · pre-fader'],
+      ['Bus 6','Talkback','','','Extra monitor mix (if needed) · pre-fader'],
+      ['Bus 7','Delay 2','','','Delay FX send · post-fader · lead and BGVs · DCA 7'],
+      ['Bus 8','Aux Bus','','','Auxiliary send · post-fader'],
+      ['9/10','Drum Subgroup','','','Stereo drums, uncompressed · DCA 1'],
+      ['11/12','Instr Subgroup','','','Keys and bass · DCA 2'],
+      ['13/14','Vox Subgroup','','','All vocals and speaking mics'],
+      ['15/16','Drums PComp','','','Drum parallel compression'],
+      ['MAIN LR','Main','','','Main PA · fed from buses 8–16'],
+      ['MTX 1','Stream L','','','Hard left · combinator FX · from Bus 2 + buses 8–16'],
+      ['MTX 2','Stream R','','','Hard right · combinator FX · from Bus 2 + buses 8–16'],
+      ['MTX 3','Stream Mono','','','Spare copy of the stream mix'],
+      ['MTX 4','Stream Mono','','','Spare copy of the stream mix'],
+      ['MTX 5','LR Copy','','','Mono copy of Main LR'],
+      ['MTX 6','LR Copy','','','Mono copy of Main LR']]},
+    out:{t:'Physical outputs',h:['Output','Signal','Goes to'],r:[
+      ['XLR 1','MTX 1 Stream L','','','Stream LEFT (to the ATEM)'],
+      ['XLR 2','MTX 2 Stream R','','','Stream RIGHT (to the ATEM)'],
+      ['XLR 3','MTX 3 Stream Mono','','','Spare stream copy (outside crew, extra speakers)'],
+      ['XLR 4','MTX 4 Stream Mono','','','Spare stream copy (outside crew, extra speakers)'],
+      ['XLR 5','MTX 5 LR Copy','','','Spare Main LR copy'],
+      ['XLR 6','MTX 6 LR Copy','','','Spare Main LR copy'],
+      ['XLR 7','Main L','','','Main L mix'],
+      ['XLR 8','Main R','','','Main R mix'],
+      ['S16 1','Bus 1 Wedge L','','','Stage wedges'],
+      ['S16 2','Bus 2 Crowd','','','Crowd mic output'],
+      ['S16 3','Bus 3 Drums','','','Drum monitor'],
+      ['S16 4','Bus 4 Keys','','','Keys monitor'],
+      ['S16 5','Bus 5 Bass','','','Bass monitor'],
+      ['S16 6','Bus 6 Extra','','','Extra monitor'],
+      ['S16 7','Main L','','','To the main PA (DriveRack)'],
+      ['S16 8','Main R','','','To the main PA (DriveRack)']]},
+    dca:{t:'DCA groups',h:['DCA','Name','Controls'],r:[
+      ['DCA 1','Drums','','','Both drum subgroups'],
+      ['DCA 2','Instruments','','','Instrument subgroup (11/12)'],
+      ['DCA 3','Speaking mic','','','Podium ch 17 and headset ch 18'],
+      ['DCA 4','Lead Vocal','','','Ch 23 and 24'],
+      ['DCA 5','BGVs','','','Ch 19–22'],
+      ['DCA 6','Wedges','','','All stage monitors'],
+      ['DCA 7','Delay 2','','','Delay FX level. Mute while people speak'],
+      ['DCA 8','Crowd','','','Crowd mic channels and bus']]}
+  };
+  var pfilt='all';
+  function renderPatch(){
+    var term=$('pq').value.trim().toLowerCase(),html='',any=false;
+    Object.keys(P).forEach(function(k){
+      if(pfilt!=='all'&&pfilt!==k)return;
+      var sec=P[k],rows=sec.r.filter(function(r){
+        if(!term)return true;
+        var hay=(r.join(' ')+' '+sec.t).toLowerCase();
+        if(/^\d+$/.test(term)){var n=('0'+term).slice(-2);return r[0]===n||r[0].replace(/\D/g,'')===term||(' '+hay+' ').indexOf(' '+term+' ')>-1||hay.indexOf('ch '+term)>-1||hay.indexOf('bus '+term)>-1;}
+        return term.split(/\s+/).every(function(w){return hay.indexOf(w)>-1;});
+      });
+      if(!rows.length)return; any=true;
+      html+='<div class="section-title">'+sec.t+'</div><div class="ptwrap"><table class="pt"><thead><tr><th>'+sec.h[0]+'</th><th>'+sec.h[1]+'</th><th>'+sec.h[2]+'</th></tr></thead><tbody>'+
+        rows.map(function(r){var un=/unused/.test(r[1]);
+          return '<tr class="'+(un?'unused':'')+'"><td>'+esc(r[0])+'</td><td><span class="nm">'+esc(r[1])+'</span>'+(r[2]?'<span class="ty">'+esc(r[2])+'</span>':'')+(r[3]?'<span class="sm">'+esc(r[3])+'</span>':'')+'</td><td>'+esc(r[4])+'</td></tr>';}).join('')+'</tbody></table></div>';
+    });
+    $('patch').innerHTML=html; $('pempty').style.display=any?'none':'block';
+  }
+  $('pq').addEventListener('input',renderPatch);
+  $('pfilters').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call(this.children,function(x){x.classList.remove('on');});b.classList.add('on');pfilt=b.dataset.f;renderPatch();});
+  renderPatch();
+
+  /* ---------- Signal flow ---------- */
+  var NS='http://www.w3.org/2000/svg';
+  var N=[
+    {id:'srcS',x:95,y:34,w:150,t:'Stage box sources',s:'vocal · speaking · crowd',lanes:['h','s'],
+      d:'Plugged in on stage: podium (17), headset (18), BGVs (19–22), leads (23–24), skit/crowd mic (25, 27–28). Includes the 3 wireless and 2 corded mics.',c:'One mic silent with no meter: wireless battery, receiver on, RF meter, or the cable into the S16.'},
+    {id:'srcL',x:265,y:34,w:150,t:'Local input sources',s:'drums · bass · keys · TB',lanes:['h','m'],
+      d:'Plugged straight into the X32: drums (1–8), bass (9–10), talkback (12–14), keys (15–16).',c:'One instrument silent with no meter: cable into the X32 local input, DI box, or the instrument isn\u2019t sending.'},
+    {id:'s16',x:95,y:104,w:150,t:'S16 stage box',s:'AES50 B · ch 17–28',lanes:['h','s'],
+      d:'Converts the stage mics to digital and sends them to the X32 over one AES50 B cable, on channels 17–25, 27 and 28. Channels 25, 27 and 28 share one mic through User In. Channels 26 and 29–32 come from the card through User In, not the S16, and are unused.',c:'All stage-box channels dead, or pops on all of them: check the AES50 B cable and link lights. Never move it to port A. Local channels 1–16 will still work, but the S16 also carries the monitors (S16 outputs 1–6) and the PA (S16 outputs 7/8), so those drop too.'},
+    {id:'loc',x:265,y:104,w:150,t:'X32 local inputs',s:'XLR 1–16 · ch 1–16',lanes:['h','m'],
+      d:'The XLR inputs on the back of the console.',c:'Only local channels affected: check those cables at the console. The S16 channels are on a different path.'},
+    {id:'aux',x:265,y:176,w:150,t:'Aux inputs',s:'laptop · Zoom · playback',lanes:['h'],
+      d:'Line-level sources: AUX 1 visuals laptop (videos and promos), AUX 5/6 card playback, AUX 7/8 X32 USB drive. AUX 3/4 (stream return from vMix, for Zoom) is the dashed line: it goes to Main LR only, skipping the buses, so Zoom callers are heard in the room without looping back onto the stream.',c:'Video or promo has no sound: AUX 1 unmuted and up, the laptop’s volume and cable, and ask media for a heads-up before it plays. AUX 3/4 stays muted on Sundays or the stream echoes.'},
+    {id:'ch',x:95,y:248,w:150,t:'X32 channels',s:'gain · mute · fader · DCA',lanes:['h','s','m'],
+      d:'Each channel sets the gain and level of one source.',c:'Meter moving but no sound: channel mute, fader, its DCA, mute groups. Gain about −18 dB, then leave it.'},
+    {id:'mon',x:265,y:248,w:150,t:'Monitor mixes',s:'S16 outputs 1–6',lanes:['m'],
+      d:'Pre-fader sends, so your house fader moves don’t change what the band hears. They travel over AES50 B to the S16 stage box in the music room and come out of its outputs 1–6: Bus 1 wedges, 3 drums, 4 keys, 5 bass, 6 extra. DCA 6 = all wedges.',c:'Singers can’t hear: raise their Bus 1 sends. Wedges silent: Bus 1 / DCA 6 up, AES50 B link OK, wedges powered, link cable between the two JBLs.'},
+    {id:'sub',x:180,y:318,w:320,t:'Buses: Aux + subgroups',s:'8 Aux · 9/10 Drums · 11/12 Instr · 13/14 Vox · 15/16 PComp',lanes:['h','s'],
+      d:'Channels feed Bus 8 (Aux bus, post-fader) and the subgroups. Main LR and the stream are both built from buses 8–16.',c:'A muted bus silences everything on it, in the house AND online. That includes Bus 8, the Aux bus. DCA 1 = drums, DCA 2 = instruments.'},
+    {id:'main',x:95,y:394,w:150,t:'Main LR',s:'fed from buses 8–16',lanes:['h'],
+      d:'The master fader for the room. Fed from buses 8–16, plus AUX 3/4 directly when it’s unmuted (Zoom meetings).',c:'Meters moving on subgroups but Main LR silent: master fader up, not muted, no mute group lit.'},
+    {id:'mtx',x:265,y:394,w:150,t:'MTX 1/2 Stream',s:'+ Bus 2 Crowd mic',lanes:['s'],
+      d:'The stream mix: subgroups post-fader plus the ducked crowd mic. Independent of the Main fader. Out on XLR 1/2.',c:'Check first for any stream problem: solo MTX 1/2. Not muted, fader up, not in the red. About −5 dB in P&W, higher for speech.'},
+    {id:'s16o',x:95,y:466,w:150,t:'S16 outputs 7/8',s:'back down AES50 B',lanes:['h'],
+      d:'Main L/R travels back to the stage box to reach the PA.',c:'Main LR moving but no PA: AES50 B link, then the cables from S16 outputs 7/8 to the DriveRack.'},
+    {id:'atem',x:265,y:466,w:150,t:'ATEM Mini',s:'Mic 1 input · LINE level',lanes:['s'],
+      d:'Takes the stream mix into the video system. Master sits at −9 dB to avoid clipping.',c:'Check LAST, after MTX and vMix. Mic 1 must be on line level (mic level distorts). Don’t change the master.'},
+    {id:'dr',x:95,y:538,w:150,t:'dbx DriveRack',s:'speaker processing',lanes:['h'],
+      d:'Shapes the signal for the speakers.',c:'Powered on, not muted, meters moving.'},
+    {id:'vmix',x:265,y:538,w:150,t:'vMix',s:'media team · compressors',lanes:['s'],
+      d:'Streaming software run by the media team. Its output also returns to the X32 on AUX 3/4.',c:'Ask media to check the vMix input and master levels. Echo on the stream: AUX 3/4 must stay muted on Sundays.'},
+    {id:'amp',x:95,y:610,w:150,t:'Amplifiers',s:'Crown subs · Gemini mains',lanes:['h'],
+      d:'In the equipment room, away from FOH. Turn on after the DriveRack, off first.',c:'No subs: Crown. No tops: Gemini. Protect light or overheating: equipment room AC (it goes off on generator).'},
+    {id:'yt',x:265,y:610,w:150,t:'YouTube',s:'online congregation',lanes:['s'],
+      d:'What people at home hear.',c:'After service, check stream health in YouTube Studio’s Live Control Room with the media team.'},
+    {id:'spk',x:95,y:682,w:150,t:'Speakers',s:'mains · subs (both left)',lanes:['h'],
+      d:'What the room hears.',c:'If everything before this is working, check the speaker cables from the amps.'}
+  ];
+  var nodesG=$('nodes'),dotsG=$('dots'),byId={};
+  N.forEach(function(n){
+    var g=document.createElementNS(NS,'g');g.setAttribute('class','node');g.setAttribute('tabindex','0');g.dataset.id=n.id;
+    var r=document.createElementNS(NS,'rect');r.setAttribute('x',n.x-n.w/2);r.setAttribute('y',n.y-22);r.setAttribute('width',n.w);r.setAttribute('height',44);r.setAttribute('rx',10);
+    var t1=document.createElementNS(NS,'text');t1.setAttribute('x',n.x);t1.setAttribute('y',n.y-3);t1.textContent=n.t;
+    var t2=document.createElementNS(NS,'text');t2.setAttribute('x',n.x);t2.setAttribute('y',n.y+13);t2.setAttribute('class','s');t2.textContent=n.s;
+    g.appendChild(r);g.appendChild(t1);g.appendChild(t2);nodesG.appendChild(g);byId[n.id]={n:n,g:g};
+  });
+  var REL={"srcS": ["no sound and no meter", "Wireless mic cutting", "Squealing during singing"], "srcL": ["no sound and no meter", "Hum, buzz", "Musician's in-ears"], "s16": ["Hum, buzz", "Nothing coming out of the house"], "loc": ["no sound and no meter", "Mics and instruments silent"], "aux": ["Video, promo or playback", "Echo, doubling"], "ch": ["meter is moving", "Mics and instruments silent", "Harsh, crunchy"], "mon": ["Musician's in-ears", "Singers can't hear", "Squealing during singing"], "sub": ["No vocal delay", "Nothing coming out of the house", "meter is moving", "Vocals too loud or buried"], "main": ["Nothing coming out of the house", "Harsh, crunchy"], "mtx": ["No audio on the livestream", "Vocals too loud or buried", "Echo, doubling"], "s16o": ["Nothing coming out of the house", "Hum, buzz"], "atem": ["Stream sounds distorted", "No audio on the livestream"], "dr": ["Nothing coming out of the house"], "vmix": ["No audio on the livestream", "Stream sounds distorted", "Echo, doubling"], "amp": ["Only the subs", "Power cut"], "yt": ["No audio on the livestream"], "spk": ["Only the subs", "Nothing coming out of the house"]};
+  function cardFor(frag){for(var i=0;i<cards.length;i++){var s=cards[i].querySelector('summary');if(s&&s.textContent.indexOf(frag)>-1)return cards[i];}return null;}
+  function goCard(frag){
+    var c=cardFor(frag); if(!c)return;
+    stopTrace(); q.value=''; filt='all';
+    [].forEach.call($('filters').children,function(x){x.classList.toggle('on',x.dataset.f==='all');});
+    applyFix(); show('v-fix'); c.open=true;
+    setTimeout(function(){var y=c.getBoundingClientRect().top+window.scrollY-document.querySelector('header').offsetHeight-12;window.scrollTo({top:y,behavior:'smooth'});c.classList.add('flash');setTimeout(function(){c.classList.remove('flash');},1800);},60);
+  }
+  function selectNode(id){
+    N.forEach(function(n){byId[n.id].g.classList.toggle('sel',n.id===id);});
+    var n=byId[id].n;
+    var rel=(REL[id]||[]).map(function(f){var c=cardFor(f);if(!c)return '';var title=c.querySelector('summary').childNodes;var txt=c.querySelector('summary').textContent.replace(c.querySelector('.tag').textContent,'').trim();return '<button type="button" class="relbtn" data-f="'+esc(f)+'">'+esc(txt)+' <span aria-hidden="true">\u203A</span></button>';}).join('');
+    $('finfo').innerHTML='<h4>'+esc(n.t)+'</h4><p>'+esc(n.d)+'</p><p><b style="color:#ff9b94">If the sound stops here:</b> '+esc(n.c)+'</p>'+(rel?'<p class="note" style="margin:10px 0 6px">Troubleshooting for this stage:</p><div class="rel">'+rel+'</div>':'');
+  }
+  $('finfo').addEventListener('click',function(e){var b=e.target.closest('.relbtn');if(b)goCard(b.dataset.f);});
+  nodesG.addEventListener('click',function(e){var g=e.target.closest('.node');if(g){stopTrace();selectNode(g.dataset.id);}});
+  nodesG.addEventListener('keydown',function(e){if(e.key==='Enter'){var g=e.target.closest('.node');if(g)selectNode(g.dataset.id);}});
+
+  var LANES=[['L-house','#e0a526',4,5.2],['L-house2','#e0a526',4,5.6],['L-aux','#e0a526',2,4.8],['L-zoom','#4fc3d9',2,4.4],['L-stream','#a77bf3',4,5.6],['L-mon','#4caf7a',2,3.2]];
+  var built=false;
+  function buildDots(){
+    if(built)return;built=true;
+    LANES.forEach(function(L){
+      for(var i=0;i<L[2];i++){
+        var c=document.createElementNS(NS,'circle');c.setAttribute('r',4.5);c.setAttribute('fill',L[1]);c.setAttribute('class','dot');c.style.color=L[1];
+        var am=document.createElementNS(NS,'animateMotion');am.setAttribute('dur',L[3]+'s');am.setAttribute('repeatCount','indefinite');am.setAttribute('begin',(-(L[3]/L[2])*i)+'s');
+        var mp=document.createElementNS(NS,'mpath');mp.setAttributeNS('http://www.w3.org/1999/xlink','href','#'+L[0]);mp.setAttribute('href','#'+L[0]);
+        am.appendChild(mp);c.appendChild(am);dotsG.appendChild(c);
+      }
+    });
+  }
+  // dots sit under the boxes, so they flow "through" each stage
+  var svg=$('flow'); svg.insertBefore(dotsG,nodesG);
+  function startFlow(){buildDots();}
+  var paused=false;
+  $('pause').addEventListener('click',function(){paused=!paused;try{paused?svg.pauseAnimations():svg.unpauseAnimations();}catch(e){} $('flowbox').classList.toggle('paused',paused);this.textContent=paused?'Play dots':'Pause dots';});
+
+  var ORDER=[['srcS','s16','srcL','loc','aux','ch','sub','main','s16o','dr','amp','spk'],['mtx','atem','vmix','yt'],['mon']];
+  var traceT=null;
+  function stopTrace(){if(traceT){clearInterval(traceT);traceT=null;$('trace').textContent='Trace step by step';}N.forEach(function(n){byId[n.id].g.classList.remove('lit');});}
+  $('trace').addEventListener('click',function(){
+    if(traceT){stopTrace();return;}
+    var seq=ORDER[0].concat(['sub'],ORDER[1],['ch'],ORDER[2]),i=0;
+    this.textContent='Stop trace';
+    function step(){N.forEach(function(n){byId[n.id].g.classList.remove('lit');});if(i>=seq.length){stopTrace();return;}byId[seq[i]].g.classList.add('lit');selectNode(seq[i]);i++;}
+    step();traceT=setInterval(step,2300);
+  });
+
+  /* ---------- Log ---------- */
+  var KEY='dpga-audio-log',log=store(KEY)||[];
+  var lch=$('lch'),lnote=$('lnote'),ent=$('entries');
+  function renderLog(){
+    ent.innerHTML=log.map(function(e,i){var sub=[e.ch,e.note].filter(Boolean).map(esc).join(' · ');
+      return '<div class="entry"><time>'+hhmm(e.t)+'</time><div class="what"><b>'+esc(e.k)+'</b>'+(sub?'<span>'+sub+'</span>':'')+'</div><button class="x" data-i="'+i+'" aria-label="Remove">×</button></div>';}).join('');
+    $('noent').style.display=log.length?'none':'block';$('badge').hidden=!log.length;$('badge').textContent=log.length;
+  }
+  function add(k){log.push({t:Date.now(),k:k,ch:lch.value.trim(),note:lnote.value.trim()});lch.value='';lnote.value='';store(KEY,log);renderLog();toast(k+' logged at '+hhmm(Date.now()));}
+  $('quick').addEventListener('click',function(e){var b=e.target.closest('button');if(b)add(b.dataset.k);});
+  $('addOther').addEventListener('click',function(){if(lnote.value.trim()||lch.value.trim())add('Note');else toast('Type a note first');});
+  ent.addEventListener('click',function(e){var b=e.target.closest('.x');if(!b)return;log.splice(+b.dataset.i,1);store(KEY,log);renderLog();});
+  function logText(){return 'DPGA audio log, '+new Date(log[0].t).toDateString()+'\n'+log.map(function(e){return hhmm(e.t)+' - '+e.k+(e.ch?' ('+e.ch+')':'')+(e.note?': '+e.note:'');}).join('\n');}
+  function copyText(txt){
+    function fb(){var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Copied');}catch(e){toast('Copy failed');}ta.remove();}
+    try{ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(function(){toast('Copied');},fb);else fb(); }catch(e){fb();}
+  }
+  $('copyLog').addEventListener('click',function(){if(!log.length){toast('Nothing to copy');return;}copyText(logText());});
+  function openBox(txt){
+    var e=encodeURIComponent(txt);
+    $('shWa').href='https://wa.me/?text='+e;
+    $('shSms').href='sms:?&body='+e;
+    $('shMail').href='mailto:?subject='+encodeURIComponent('DPGA audio log')+'&body='+e;
+    $('sharebox').hidden=false; $('sharebox').scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  $('shareLog').addEventListener('click',function(){
+    if(!log.length){toast('Nothing to share yet');return;}
+    var txt=logText();
+    if(navigator.share){
+      try{ navigator.share({title:'DPGA audio log',text:txt}).catch(function(err){ if(!err||err.name!=='AbortError') openBox(txt); }); return; }catch(e){}
+    }
+    openBox(txt);
+  });
+  $('shCopy').addEventListener('click',function(){if(log.length)copyText(logText());});
+  twoTap($('clearLog'),'Clear log',function(){if(!log.length){toast('Nothing to clear');return;}log=[];store(KEY,log);renderLog();toast('Log cleared');});
+  function tick(){$('clock').textContent='· now '+hhmm(Date.now());} tick(); setInterval(tick,15000);
+  renderLog();
+})();
+</script>
+
+<script>
+(function(){
+  if('serviceWorker' in navigator && /^https?:/.test(location.protocol)){
+    window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
+  }
+  var deferred=null,btn=document.getElementById('installBtn');
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferred=e;if(btn)btn.hidden=false;});
+  if(btn)btn.addEventListener('click',function(){if(!deferred)return;deferred.prompt();deferred.userChoice.finally(function(){deferred=null;btn.hidden=true;});});
+  window.addEventListener('appinstalled',function(){if(btn)btn.hidden=true;});
+})();
+</script>
+</body>
+</html>
