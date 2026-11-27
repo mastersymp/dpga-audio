@@ -278,6 +278,12 @@ main:{on:true,fader:-1.5},
 dca:{1:{name:'DRUMS',col:'WH',on:true,fader:2.4},2:{name:'Instruments',col:'BL',on:true,fader:-3.1},3:{name:'Speaking mic',col:'YEi',on:true,fader:2.5},4:{name:'Lead Vocal',col:'GNi',on:false,fader:1.6},5:{name:'BGVs',col:'GN',on:false,fader:-.6},6:{name:'Wedges',col:'CYi',on:true,fader:-7.5},7:{name:'Delay2',col:'MGi',on:false,fader:1.9},8:{name:'CROWD',col:'RDi',on:true,fader:2.1}},
 mg:[false,false,false,false,true,true],
 routing:'REC',aes:true};
+// stereo links from /config/chlink, auxlink (FX returns 7/8 are a stereo pair)
+SCENE.linked={c15:true,c27:true,c31:true,a3:true,a7:true,f7:true};
+const LINK={c15:'c16',c16:'c15',c27:'c28',c28:'c27',c31:'c32',c32:'c31',a3:'a4',a4:'a3',a7:'a8',a8:'a7',f7:'f8',f8:'f7'};
+const oddOf=id=>{const p=LINK[id];if(!p)return null;const n=s=>parseInt(s.slice(1));return n(id)<n(p)?id:p;};
+for(const id in SCENE.buses)if(SCENE.buses[id].mtx!==undefined)SCENE.buses[id].mtxOn=true;
+SCENE.main.mtx=-90;SCENE.main.mtxOn=true;
 const MGNAME=['Drums','Bass & keys','Speaking','Vocals','Aux ins','FX returns'];
 
 // "Service running" = the scene after the usual unmutes for Praise & Worship
@@ -331,11 +337,11 @@ function buildAudio(){
   // main LR
   A.main={in:stereoGain(1),mute:stereoGain(1),fad:stereoGain(1),meter:an()};
   A.main.in.connect(A.main.mute);A.main.mute.connect(A.main.fad);A.main.fad.connect(A.main.meter);
-  A.houseMono=monoGain(1);A.main.fad.connect(A.houseMono);
+  A.houseMono=monoGain(1);A.main.fad.connect(A.houseMono);A.mainMx=stereoGain(0);A.main.fad.connect(A.mainMx);
   A.aesHouse=g(1);A.houseMono.connect(A.aesHouse);A.aesHouse.connect(A.lis.house);
   // matrix 1/2 stream
   A.mtx={in:stereoGain(1),mute:stereoGain(1),fad:stereoGain(1),meter:an()};
-  {const e=eqBlock(),c=compBlock();A.mtx.in.connect(e.in);e.out.connect(c.in);c.out.connect(A.mtx.mute);A.mtx.eqb=e;A.mtx.cmp=c;}A.mtx.mute.connect(A.mtx.fad);A.mtx.fad.connect(A.mtx.meter);A.mtx.fad.connect(A.lis.stream);
+  {A.mainMx.connect(A.mtx.in);const e=eqBlock(),c=compBlock();A.mtx.in.connect(e.in);e.out.connect(c.in);c.out.connect(A.mtx.mute);A.mtx.eqb=e;A.mtx.cmp=c;}A.mtx.mute.connect(A.mtx.fad);A.mtx.fad.connect(A.mtx.meter);A.mtx.fad.connect(A.lis.stream);
   // stereo buses -> LR and MTX
   for(const id of['b9','b11','b13','b15','b8','b2']){const n=A.bus[id];
     let srcN=n.fad;
@@ -480,9 +486,9 @@ function applyIn(x){const n=A.in&&A.in[x.id];if(!n)return;applyInProc(x);
   for(const p of[9,11,13,15])setP(n.grp[p].gain,x.grp[p]?1:0);}
 function applyBus(id){const b=ST.buses[id],n=A.bus&&A.bus[id];if(!n)return;applyBusProc(n,b.proc);
   setP(n.mute.gain,busMuted(b)?0:1);setP(n.fad.gain,lin(busGainDb(b)));
-  if(n.lr)setP(n.lr.gain,b.lr?1:0);if(n.mx)setP(n.mx.gain,b.mtx!=null?lin(b.mtx):0);
+  if(n.lr)setP(n.lr.gain,b.lr?1:0);if(n.mx)setP(n.mx.gain,b.mtxOn&&b.mtx!=null?lin(b.mtx):0);
   if(A.s16[id])setP(A.s16[id].gain,ST.aes?1:0);}
-function applyMain(){if(!A.main)return;applyBusProc(A.main,ST.main.proc);applyBusProc(A.mtx,ST.mtx.m1.proc);const m=ST.main;setP(A.main.mute.gain,m.on?1:0);setP(A.main.fad.gain,lin(m.fader));setP(A.aesHouse.gain,ST.aes?1:0);
+function applyMain(){if(!A.main)return;setP(A.mainMx.gain,ST.main.mtxOn?lin(ST.main.mtx):0);applyBusProc(A.main,ST.main.proc);applyBusProc(A.mtx,ST.mtx.m1.proc);const m=ST.main;setP(A.main.mute.gain,m.on?1:0);setP(A.main.fad.gain,lin(m.fader));setP(A.aesHouse.gain,ST.aes?1:0);
   const x=ST.mtx.m1;setP(A.mtx.mute.gain,x.on?1:0);setP(A.mtx.fad.gain,lin(x.fader));}
 function applyAll(){if(!AC)return;for(const x of ST.inputs){wireSendTypes(x);applyIn(x);}for(const id in ST.buses)applyBus(id);applyMain();applyListen();}
 
@@ -575,7 +581,8 @@ function makeStrip(it,side){
   if(it.t==='blank')return el('div','strip blank','');
   const s=el('div','strip');const inf=stripInfo(it);
   const isSel=sel&&sel.t===it.t&&sel.id===it.id;if(isSel)s.classList.add('selected');
-  const sc=el('div','scrib c-'+inf.col,`<small>${inf.num}</small>${esc(inf.name)}`);s.appendChild(sc);
+  const lk=it.t==='in'&&oddOf(it.id)&&ST.linked[oddOf(it.id)];
+  const sc=el('div','scrib c-'+inf.col,`<small>${inf.num}${lk?' 🔗':''}</small>${esc(inf.name)}`);s.appendChild(sc);
   const sb=el('button','sel'+(isSel?' on':''),'SEL');sb.onclick=()=>{sel={t:it.t,id:it.id};renderAll();};s.appendChild(sb);
   const mf=el('div','mf');const m=el('div','meter','<i></i>');mf.appendChild(m);
   const fd=el('div','fader');for(const u of[10,0,-10,-30])fd.appendChild(Object.assign(el('div','u'),{style:`top:${6+(1-db2pos(u))*138}px`}));
@@ -583,8 +590,8 @@ function makeStrip(it,side){
   const dbl=el('div','db',fmt(inf.fader));s.appendChild(dbl);
   const place=()=>{const v=objOf(it).fader;cap.style.top=(6+(1-db2pos(v))*(fd.clientHeight-12||138))+'px';dbl.textContent=fmt(v);};
   requestAnimationFrame(place);
-  dragFader(fd,(p)=>{const o=objOf(it);let d=pos2db(p);if(d<=-89)d=-90;o.fader=Math.round(d*10)/10;changed('drag');place();},()=>renderAll());
-  const mb=el('button','mute'+(!inf.on?' on':(inf.grpMute?' grp':'')),'MUTE');mb.onclick=()=>{const o=objOf(it);o.on=!o.on;changed();};s.appendChild(mb);
+  dragFader(fd,(p)=>{if(it.t==='in')touched=it.id;const o=objOf(it);let d=pos2db(p);if(d<=-89)d=-90;o.fader=Math.round(d*10)/10;changed('drag');place();},()=>renderAll());
+  const mb=el('button','mute'+(!inf.on?' on':(inf.grpMute?' grp':'')),'MUTE');mb.onclick=()=>{if(it.t==='in')touched=it.id;const o=objOf(it);o.on=!o.on;changed();};s.appendChild(mb);
   if(it.t==='in')meters.push({side,el:m.firstChild,an:()=>A.in&&A.in[it.id].meter});
   else if(it.t==='bus')meters.push({side,el:m.firstChild,an:()=>A.bus&&A.bus[it.id].meter});
   else if(it.t==='main')meters.push({side,el:m.firstChild,an:()=>A.main&&A.main.meter});
@@ -624,7 +631,7 @@ function subPath(x,dest){const out=[];
   const bm=[];if(!b.on)bm.push('bus mute');b.mg.forEach(k=>{if(ST.mg[k-1])bm.push('mute group '+k);});b.dca.forEach(k=>{if(!ST.dca[k].on)bm.push('DCA '+k);});
   out.push(chip(b.name+(bm.length?': '+bm.join(', '):''),bm.length||busGainDb(b)<-60?'bad':'ok'));
   if(dest==='house'){out.push(chip('Assigned to LR',b.lr?'ok':'bad'));out.push(chip('Main LR'+(ST.main.on?' '+fmt(ST.main.fader):': muted'),ST.main.on&&ST.main.fader>-60?'ok':'bad'));out.push(chip('S16 out 7/8 · AES50',ST.aes?'ok':'bad'));out.push(chip('House (mono)','ok'));}
-  else{out.push(chip('MTX 1/2 send '+fmt(b.mtx),b.mtx!=null?'ok':'bad'));const m=ST.mtx.m1;out.push(chip('MTX 1/2'+(m.on?' '+fmt(m.fader):': muted'),m.on&&m.fader>-60?'ok':'bad'));out.push(chip('Stream (stereo)','ok'));}
+  else{out.push(chip('MTX 1/2 send '+(b.mtxOn?fmt(b.mtx):'OFF'),b.mtxOn&&b.mtx>-60?'ok':'bad'));const m=ST.mtx.m1;out.push(chip('MTX 1/2'+(m.on?' '+fmt(m.fader):': muted'),m.on&&m.fader>-60?'ok':'bad'));out.push(chip('Stream (stereo)','ok'));}
   return out;}
 function monPath(x,bus){const s=x.sends[bus];const b=ST.buses['b'+bus];const out=[];
   if(!s)return [chip('No send to Bus '+bus,'bad')];
@@ -643,7 +650,12 @@ function renderSelBase(p){if(!sel)return;
   if(sel.t==='in')return renderSelIn(p,IN[sel.id]);
   if(sel.t==='bus')return renderSelBus(p,sel.id);
   if(sel.t==='dca')return renderSelDca(p,sel.id);
+  if(sel.t==='main'){p.innerHTML='<h3>Main LR</h3><p class="note">Main LR feeds the house: it goes back down AES50 B to S16 outputs 7/8, then the DriveRack and amps. The house is mono.</p><p class="note">Main LR can also feed the stream matrix. It\u2019s at −∞ in the DPGASunday scene, because the stream is built from the buses instead. Bring it up and listen to the stream to hear why.</p>';p.appendChild(mtxSendBlock(ST.main,'Main LR'));return;}
   p.innerHTML=`<h3>${sel.t==='main'?'Main LR':'Matrix '+ST.mtx[sel.id].num+' · '+ST.mtx[sel.id].name}</h3><p class="note">${sel.t==='main'?'Main LR feeds the house: it goes back down AES50 B to S16 outputs 7/8, then the DriveRack and amps. The house is mono.':sel.id==='m1'?'MTX 1/2 is the stream: buses 2, 8 and 9–16 feed it, not Main LR. Its outputs go to vMix and the ATEM.':'Not simulated here.'}</p>`;}
+function mtxSendBlock(o,from){const w=el('div','sends');w.style.marginTop='8px';const bx=el('div','send');
+  bx.innerHTML=`<div class="t"><b>${esc(from)} → MTX 1/2</b><span>Stream</span></div><div class="t"><button class="o ${o.mtxOn?'on':''}">${o.mtxOn?'ON':'OFF'}</button><span class="ty">POST</span><output>${fmt(o.mtx)}</output></div><input type="range" min="0" max="1" step=".005" value="${db2pos(o.mtx)}">`;
+  bx.querySelector('.o').onclick=()=>{o.mtxOn=!o.mtxOn;changed();};const r=bx.querySelector('input'),out=bx.querySelector('output');r.oninput=()=>{let d=pos2db(+r.value);d=d<=-89?-90:Math.round(d*10)/10;o.mtx=d;out.textContent=fmt(d);changed(true);};
+  w.appendChild(bx);return w;}
 function head(o,num){return `<div class="head"><span class="scrib c-${o.col}">${num} · ${esc(o.name||'—')}</span></div>`;}
 function renderSelIn(p,x){
   p.innerHTML=head(x,typeof x.num==='number'?'Ch '+x.num:x.num);
@@ -653,6 +665,7 @@ function renderSelIn(p,x){
   const info=el('div','note');info.style.margin='2px 0 6px';
   info.innerHTML=`DCA: ${x.dca.length?x.dca.map(k=>k+' '+ST.dca[k].name).join(', '):'none'} · Mute group: ${x.mg.length?x.mg.map(k=>k+' '+MGNAME[k-1]).join(', '):'none'}${x.stage?' · From the S16 stage box':x.aux?' · Aux input (local)':x.fx?' · FX 4 return':' · Local input'}`;p.appendChild(info);
   const rowb=el('div','row');
+  if(oddOf(x.id)){const o=oddOf(x.id),pn=LINK[x.id];const lb=el('button',ST.linked[o]?'on':'','🔗 Link with '+(IN[pn].num>0?'Ch '+IN[pn].num:IN[pn].num)+': '+(ST.linked[o]?'ON':'OFF'));lb.onclick=()=>{ST.linked[o]=!ST.linked[o];if(ST.linked[o])touched=x.id;changed();};rowb.appendChild(lb);}
   const pb=el('button',listen==='pfl'?'on':'','🎧 PFL this channel');pb.onclick=()=>{setListen(listen==='pfl'?'house':'pfl');};rowb.appendChild(pb);
   if(!x.aux&&!x.fx&&x.src){const cb=el('button','',x.stage?'Check mic cable':'Check cable / DI');cb.onclick=()=>{if(!x.cable){x.cable=true;toast('Loose cable found and reseated.');}else toast('Cable and DI look fine.');changed();};rowb.appendChild(cb);}
   p.appendChild(rowb);
@@ -677,9 +690,9 @@ function renderSelBus(p,id){const b=ST.buses[id];p.innerHTML=head(b,'Bus '+b.num
   p.innerHTML+=`<p class="note">${what}</p><p class="note">Fed by: ${members.length?members.map(esc).join(', '):'nothing'}</p>`;
   const row=el('div','row');
   if(b.lr!=null&&!b.mon&&id!=='b7'){const lb=el('button',b.lr?'on':'','LR assign: '+(b.lr?'ON':'OFF'));lb.onclick=()=>{b.lr=!b.lr;changed();};row.appendChild(lb);}
-  if(b.mtx!==undefined){const mb=el('button',b.mtx!=null?'on':'','MTX 1/2 send: '+(b.mtx!=null?fmt(b.mtx):'OFF'));mb.onclick=()=>{b.mtx=b.mtx!=null?null:(b._mtx||-9.3);if(b.mtx!=null)b._mtx=b.mtx;changed();};row.appendChild(mb);if(b.mtx!=null)b._mtx=b.mtx;}
   if(id==='b1'||id==='b3'||id==='b4'||id==='b5'){const lb=el('button','','🎧 Listen to this mix');lb.onclick=()=>{if(id==='b1')setListen('wedge');else{$('#iemSel').value=id.slice(1);setListen('iem');}};row.appendChild(lb);}
   p.appendChild(row);
+  if(b.mtx!==undefined)p.appendChild(mtxSendBlock(b,'Bus '+b.num));
   const info=el('div','note');info.style.marginTop='6px';info.innerHTML=`DCA: ${b.dca.length?b.dca.map(k=>k+' '+ST.dca[k].name).join(', '):'none'} · Mute group: ${b.mg.length?b.mg.map(k=>k+' '+MGNAME[k-1]).join(', '):'none'}`;p.appendChild(info);}
 function renderSelDca(p,k){const d=ST.dca[k];p.innerHTML=head(d,'DCA '+k);
   const mem=[...ST.inputs.filter(x=>x.dca.includes(+k)).map(x=>(typeof x.num==='number'?'Ch '+x.num+' ':'')+(x.name||'')),...Object.values(ST.buses).filter(b=>b.dca.includes(+k)).map(b=>'Bus '+b.num+' '+b.name)];
@@ -771,7 +784,7 @@ function hasProc(){if(!sel)return null;if(sel.t==='in'){const x=IN[sel.id];retur
 function renderSel(){const p=$('#selp');p.innerHTML='';if(!sel)return;tapRTA();
   const h=ADV?hasProc():null;
   if(!h){renderSelBase(p);return;}
-  const tabs=h.kind==='in'?[['route','Routing'],['gate','HPF & Gate'],['eq','EQ'],['comp','Compressor']]:h.kind==='bus'?[['route','Routing'],['eq','EQ'],['comp','Compressor']]:h.kind==='mtx'?[['route','Routing'],['eq','EQ'],['comp','Limiter']]:[['eq','EQ'],['comp','Limiter']];
+  const tabs=h.kind==='in'?[['route','Routing'],['gate','HPF & Gate'],['eq','EQ'],['comp','Compressor']]:h.kind==='bus'?[['route','Routing'],['eq','EQ'],['comp','Compressor']]:h.kind==='mtx'?[['route','Routing'],['eq','EQ'],['comp','Limiter']]:[['route','Routing'],['eq','EQ'],['comp','Limiter']];
   if(!tabs.some(x=>x[0]===selTab))selTab=tabs[0][0];
   const name=h.kind==='in'?(typeof h.o.num==='number'?'Ch '+h.o.num:h.o.num)+' · '+(h.o.name||'—'):h.kind==='bus'?'Bus '+h.o.num+' · '+h.o.name:h.kind==='mtx'?'MTX 1/2 · Stream L/R':'Main LR';
   const tb=el('div','tabs');tb.innerHTML=`<span class="scrib c-${h.o.col||'WH'}" style="width:auto;min-height:0;padding:4px 8px;font-size:13px;align-self:center">${esc(name)}</span>`;
@@ -874,7 +887,11 @@ $('#advBtn').onclick=()=>{ADV=!ADV;$('#advBtn').classList.toggle('on',ADV);if(AD
   toast(ADV?'Stage 4 on: tap SEL, then EQ, Compressor or HPF & Gate. Drills now practise EQ and dynamics.':'Stage 4 off.',4000);};
 
 /* ================= glue ================= */
-function changed(light){if(AC){for(const x of ST.inputs)applyIn(x);for(const id in ST.buses)applyBus(id);applyMain();applyListen();}
+let touched=null;
+function linkSync(id){const o=oddOf(id);if(!o||!ST.linked[o])return;const a=IN[id],b=IN[LINK[id]];if(!a||!b)return;
+  b.on=a.on;b.fader=a.fader;b.trim=a.trim;b.dca=[...a.dca];b.mg=[...a.mg];b.grp=Object.assign({},a.grp);
+  for(const k in a.sends){const s=a.sends[k];b.sends[k]=Object.assign({},s);}if(a.proc&&b.proc)b.proc=clone(a.proc);wireSendTypes(b);}
+function changed(light){if(touched){linkSync(touched);touched=null;}if(AC){for(const x of ST.inputs)applyIn(x);for(const id in ST.buses)applyBus(id);applyMain();applyListen();}
   checkDrill();
   if(light==='proc')return;
   if(light==='drag'){renderPathsOnly();return;}
@@ -905,6 +922,7 @@ function meterLoop(){for(const m of meters){const a=m.an();if(!a)continue;a.getF
   advTick();requestAnimationFrame(meterLoop);}
 $('#startBtn').onclick=async()=>{$('#start').remove();AC=new (window.AudioContext||window.webkitAudioContext)();await loadWorklet();buildAudio();setP(A.vol.gain,(+$('#vol').value/100)**2*2);startCrowd();startSeq();await AC.resume();renderAll();meterLoop();};
 renderAll();
+['input','click','change'].forEach(ev=>$('#selp').addEventListener(ev,()=>{if(sel&&sel.t==='in')touched=sel.id;},true));
 </script>
 </body>
 </html>
