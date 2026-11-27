@@ -113,6 +113,17 @@
   .lvm i{position:absolute;left:0;top:0;bottom:0;width:0;background:#3fae67}
   .lvm b{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--red)}
   .pr .row{margin:4px 0}
+
+  .strip .solo{width:100%;font-size:10px;padding:3px 0;border-radius:5px;font-weight:700}
+  .strip .solo.on{background:#e0c43a;border-color:#e0c43a;color:#111}
+  .solo-gap{height:22px}
+  .solo-clear{background:#e0c43a;color:#111;border-color:#e0c43a;font-weight:700}
+  .asg{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}
+  .asg .sub{min-width:84px}
+  .asg button{font-size:11px;padding:4px 7px}
+  .asg button.on{background:var(--accent);border-color:var(--accent);color:#111;font-weight:700}
+  .asg button.mg.on{background:var(--red);border-color:var(--red);color:#fff}
+  .tap{font-size:16px;font-weight:700;padding:12px 20px;background:var(--purple);border-color:var(--purple);color:#fff}
   @media (max-width:420px){.mf{height:130px}.scrib{font-size:9px}}
 </style>
 </head>
@@ -152,11 +163,11 @@
       <button data-l="stream">Stream</button>
       <button data-l="wedge">Wedge</button>
       <button data-l="iem">In-ear</button>
-      <button data-l="pfl">PFL</button>
     </div>
     <select id="iemSel" style="font-size:13px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:5px">
       <option value="3">Drums (Bus 3)</option><option value="4">Keys (Bus 4)</option><option value="5">Bass (Bus 5)</option>
     </select>
+    <button id="clrSolo" class="solo-clear" hidden>Clear solo</button>
     <div class="vol"><span class="sub">Vol</span><input type="range" id="vol" min="0" max="100" value="75"></div>
   </div>
 </header>
@@ -279,6 +290,7 @@ dca:{1:{name:'DRUMS',col:'WH',on:true,fader:2.4},2:{name:'Instruments',col:'BL',
 mg:[false,false,false,false,true,true],
 routing:'REC',aes:true};
 // stereo links from /config/chlink, auxlink (FX returns 7/8 are a stereo pair)
+SCENE.fx4={time:319,fL:'1',fR:'1/2',lo:211,hi:3100,flo:313,fhi:2400,feedL:50,feedR:50};
 SCENE.linked={c15:true,c27:true,c31:true,a3:true,a7:true,f7:true};
 const LINK={c15:'c16',c16:'c15',c27:'c28',c28:'c27',c31:'c32',c32:'c31',a3:'a4',a4:'a3',a7:'a8',a8:'a7',f7:'f8',f8:'f7'};
 const oddOf=id=>{const p=LINK[id];if(!p)return null;const n=s=>parseInt(s.slice(1));return n(id)<n(p)?id:p;};
@@ -320,7 +332,8 @@ function buildAudio(){
   // soft clipper: clean up to -1 dBFS, rounds off anything above instead of hard clipping
   A.clip=AC.createWaveShaper();{const n=4096,cu=new Float32Array(n),th=.89;for(let i=0;i<n;i++){const x=i/(n-1)*2-1,ax=Math.abs(x);cu[i]=Math.sign(x)*(ax<=th?ax:th+(1-th)*Math.tanh((ax-th)/(1-th)));}A.clip.curve=cu;A.clip.oversample='2x';}
   A.vol.connect(A.lim);A.lim.connect(A.limMk);A.limMk.connect(A.clip);A.clip.connect(AC.destination);
-  A.lis={};for(const k of['house','stream','wedge','iem','pfl']){A.lis[k]=g(1);A.lis[k]._to=A.vol;A.lis[k]._c=false;}
+  A.lis={};for(const k of['house','stream','wedge','iem']){A.lis[k]=g(1);A.lis[k]._to=A.vol;A.lis[k]._c=false;}
+  A.soloBus=stereoGain(1);A.soloBus._to=A.vol;A.soloBus._c=false;
   // sources
   // bass DI split: lo and hi
   // buses
@@ -347,14 +360,17 @@ function buildAudio(){
   A.s16={};for(const id of['b1','b3','b4','b5','b6']){A.s16[id]=g(1);A.bus[id].fad.connect(A.s16[id]);}
   A.wedgeSel=A.s16.b1;A.s16.b1.connect(A.lis.wedge);
   A.iemPick={};for(const id of['b3','b4','b5']){A.iemPick[id]=g(id==='b3'?1:0);A.s16[id].connect(A.iemPick[id]);A.iemPick[id].connect(A.lis.iem);}
+  for(const id in A.bus){const n=A.bus[id];n.solo=g(1);n.fad.connect(n.solo);n.solo._to=A.soloBus;n.solo._c=false;}
+  A.mtx.solo=g(1);A.mtx.fad.connect(A.mtx.solo);A.mtx.solo._to=A.soloBus;A.mtx.solo._c=false;
+  A.main.solo=g(1);A.main.fad.connect(A.main.solo);A.main.solo._to=A.soloBus;A.main.solo._c=false;
   // FX4 stereo delay fed by bus 7
-  const fxIn=AC.createBiquadFilter();fxIn.type='highpass';fxIn.frequency.value=211;A.bus.b7.fad.connect(fxIn);
-  const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=3100;fxIn.connect(lp);
-  const dL=AC.createDelay(1),dR=AC.createDelay(1);dL.delayTime.value=.319;dR.delayTime.value=.16;
-  const fbL=g(.32),fbR=g(.32);lp.connect(dL);lp.connect(dR);dL.connect(fbL);fbL.connect(dL);dR.connect(fbR);fbR.connect(dR);
-  SRC.fxL=g(.35);SRC.fxR=g(.35);dL.connect(SRC.fxL);dR.connect(SRC.fxR);
+  {const F=A.fx={};F.lo=AC.createBiquadFilter();F.lo.type='highpass';A.bus.b7.fad.connect(F.lo);
+  F.hi=AC.createBiquadFilter();F.hi.type='lowpass';F.lo.connect(F.hi);
+  F.dL=AC.createDelay(6);F.dR=AC.createDelay(6);F.hi.connect(F.dL);F.hi.connect(F.dR);
+  for(const s of['L','R']){const d=F['d'+s],fb=g(.5),fl=AC.createBiquadFilter(),fh=AC.createBiquadFilter();fl.type='highpass';fh.type='lowpass';d.connect(fb);fb.connect(fl);fl.connect(fh);fh.connect(d);F['fb'+s]=fb;F['fl'+s]=fl;F['fh'+s]=fh;}
+  SRC.fxL=g(.7);SRC.fxR=g(.7);F.dL.connect(SRC.fxL);F.dR.connect(SRC.fxR);}
   // inputs
-  A.in={};A.pflBus=g(1);A.pflBus.connect(A.lis.pfl);
+  A.in={};
   for(const x of ST.inputs){const n={};
     n.stem=g(1);if(x.fx&&SRC[x.src])SRC[x.src].connect(n.stem);
     n.gate=g(1);n.trim=g(1);n.meter=an();n.mute=monoGain(1);n.fad=monoGain(1);
@@ -363,7 +379,7 @@ function buildAudio(){
     n.sends={};
     for(let b=1;b<=8;b++){const s=monoGain(0);n.sends[b]=s;s._to=A.bus['b'+b].in;s._c=false;}
     n.grp={};for(const p of[9,11,13,15]){const s=stereoGain(0);n.grp[p]=s;n.pan.connect(s);s._to=A.bus['b'+p].in;s._c=false;}
-    n.pfl=g(0);(n.post||n.trim).connect(n.pfl);n.pfl._to=A.pflBus;n.pfl._c=false;
+    n.pfl=g(1);(n.post||n.trim).connect(n.pfl);n.pfl._to=A.soloBus;n.pfl._c=false;
     n.meter._src=n.trim;A.in[x.id]=n;wireSendTypes(x);}
   if(A.in.c1&&A.in.c9&&A.in.c9.kf)A.in.c1.trim.connect(A.in.c9.kf);
   for(const id of['b1','b2','b3','b4','b5','b6','b7','b8','b9','b11','b13','b15'])if(ST.buses[id].proc)buildBusProc(A.bus[id],ST.buses[id].proc);
@@ -499,14 +515,19 @@ function applyBus(id){const b=ST.buses[id],n=A.bus&&A.bus[id];if(!n)return;apply
   if(A.s16[id])setP(A.s16[id].gain,ST.aes?1:0);}
 function applyMain(){if(!A.main)return;setP(A.mainMx.gain,ST.main.mtxOn?lin(ST.main.mtx):0);applyBusProc(A.main,ST.main.proc);applyBusProc(A.mtx,ST.mtx.m1.proc);const m=ST.main;setP(A.main.mute.gain,m.on?1:0);setP(A.main.fad.gain,lin(m.fader));setP(A.aesHouse.gain,ST.aes?1:0);
   const x=ST.mtx.m1;setP(A.mtx.mute.gain,x.on?1:0);setP(A.mtx.fad.gain,lin(x.fader));}
-function applyAll(){if(!AC)return;for(const x of ST.inputs){wireSendTypes(x);applyIn(x);}for(const id in ST.buses)applyBus(id);applyMain();applyListen();}
+function applyFX(){if(!A.fx)return;const F=A.fx,s=ST.fx4,fac=v=>{const [a,b]=String(v).split('/');return b?(+a)/(+b):+a;};
+  setP(F.lo.frequency,s.lo);setP(F.hi.frequency,s.hi);setP(F.dL.delayTime,Math.min(6,s.time*fac(s.fL)/1000));setP(F.dR.delayTime,Math.min(6,s.time*fac(s.fR)/1000));
+  for(const k of['L','R']){setP(F['fb'+k].gain,s['feed'+k]/100*.9);setP(F['fl'+k].frequency,s.flo);setP(F['fh'+k].frequency,s.fhi);}}
+function applyAll(){if(!AC)return;applyFX();for(const x of ST.inputs){wireSendTypes(x);applyIn(x);}for(const id in ST.buses)applyBus(id);applyMain();applyListen();}
 
 /* ================= listen ================= */
 let listen='house',pflOn=false;
 function applyListen(){if(!AC)return;
-  for(const k in A.lis)link(A.lis[k],k===listen);
+  const solo=SOLO.size>0;for(const k in A.lis)link(A.lis[k],!solo&&k===listen);link(A.soloBus,solo);
+  for(const id in A.bus)if(A.bus[id].solo)link(A.bus[id].solo,SOLO.has('bus:'+id));link(A.mtx.solo,SOLO.has('mtx:m1'));link(A.main.solo,SOLO.has('main'));
+  const cs=$('#clrSolo');if(cs){cs.hidden=!solo;cs.textContent='Clear solo ('+SOLO.size+')';}document.querySelectorAll('#lisBtns button').forEach(b=>b.style.opacity=solo?.45:1);
   const iem='b'+$('#iemSel').value;for(const id in A.iemPick)setP(A.iemPick[id].gain,id===iem?1:0);
-  for(const id in A.in){const on=listen==='pfl'&&sel&&sel.t==='in'&&sel.id===id;setP(A.in[id].pfl.gain,on?1:0);link(A.in[id].pfl,on);}
+  for(const id in A.in)link(A.in[id].pfl,SOLO.has('in:'+id));
   syncMeters();}
 
 /* ================= real multitrack stems ================= */
@@ -566,6 +587,7 @@ function makeStrip(it,side){
   const place=()=>{const v=objOf(it).fader;cap.style.top=(6+(1-db2pos(v))*(fd.clientHeight-12||138))+'px';dbl.textContent=fmt(v);};
   requestAnimationFrame(place);
   dragFader(fd,(p)=>{if(it.t==='in')touched=it.id;const o=objOf(it);let d=pos2db(p);if(d<=-89)d=-90;o.fader=Math.round(d*10)/10;changed('drag');place();},()=>renderAll());
+  const sk=soloKey(it);if(sk){const so=el('button','solo'+(SOLO.has(sk)?' on':''),'SOLO');so.onclick=()=>toggleSolo(sk);s.appendChild(so);}else{s.appendChild(el('div','solo-gap',''));}
   const mb=el('button','mute'+(!inf.on?' on':(inf.grpMute?' grp':'')),'MUTE');mb.onclick=()=>{if(it.t==='in')touched=it.id;const o=objOf(it);o.on=!o.on;changed();};s.appendChild(mb);
   if(it.t==='in')meters.push({side,el:m.firstChild,an:()=>A.in&&A.in[it.id].meter});
   else if(it.t==='bus')meters.push({side,el:m.firstChild,an:()=>A.bus&&A.bus[it.id].meter});
@@ -637,10 +659,10 @@ function renderSelIn(p,x){
   ctl('Gain',-24,24,.5,x.trim,v=>{x.trim=v;changed(true);},v=>(v>0?'+':'')+v+' dB');
   ctl('Pan',-100,100,1,x.pan,v=>{x.pan=v;changed(true);},v=>v===0?'C':(v<0?'L':'R')+Math.abs(v));
   const info=el('div','note');info.style.margin='2px 0 6px';
-  info.innerHTML=`DCA: ${x.dca.length?x.dca.map(k=>k+' '+ST.dca[k].name).join(', '):'none'} · Mute group: ${x.mg.length?x.mg.map(k=>k+' '+MGNAME[k-1]).join(', '):'none'}${x.stage?' · From the S16 stage box':x.aux?' · Aux input (local)':x.fx?' · FX 4 return':' · Local input'}`;p.appendChild(info);
+  info.innerHTML=`${x.stage?'From the S16 stage box':x.aux?'Aux input (local)':x.fx?'FX 4 return':'Local input'}`;p.appendChild(info);p.appendChild(assignRows(x));if(x.fx)p.appendChild(fxBlock());
   const rowb=el('div','row');
   if(oddOf(x.id)){const o=oddOf(x.id),pn=LINK[x.id];const lb=el('button',ST.linked[o]?'on':'','🔗 Link with '+(IN[pn].num>0?'Ch '+IN[pn].num:IN[pn].num)+': '+(ST.linked[o]?'ON':'OFF'));lb.onclick=()=>{ST.linked[o]=!ST.linked[o];if(ST.linked[o])touched=x.id;changed();};rowb.appendChild(lb);}
-  const pb=el('button',listen==='pfl'?'on':'','🎧 PFL this channel');pb.onclick=()=>{setListen(listen==='pfl'?'house':'pfl');};rowb.appendChild(pb);
+  const pb=el('button',SOLO.has('in:'+x.id)?'on':'','🎧 Solo this channel (PFL)');pb.onclick=()=>toggleSolo('in:'+x.id);rowb.appendChild(pb);
   if(!x.aux&&!x.fx&&x.src){const cb=el('button','',x.stage?'Check mic cable':'Check cable / DI');cb.onclick=()=>{if(!x.cable){x.cable=true;toast('Loose cable found and reseated.');}else toast('Cable and DI look fine.');changed();};rowb.appendChild(cb);}
   p.appendChild(rowb);
   // paths
@@ -667,7 +689,7 @@ function renderSelBus(p,id){const b=ST.buses[id];p.innerHTML=head(b,'Bus '+b.num
   if(id==='b1'||id==='b3'||id==='b4'||id==='b5'){const lb=el('button','','🎧 Listen to this mix');lb.onclick=()=>{if(id==='b1')setListen('wedge');else{$('#iemSel').value=id.slice(1);setListen('iem');}};row.appendChild(lb);}
   p.appendChild(row);
   if(b.mtx!==undefined)p.appendChild(mtxSendBlock(b,'Bus '+b.num));
-  const info=el('div','note');info.style.marginTop='6px';info.innerHTML=`DCA: ${b.dca.length?b.dca.map(k=>k+' '+ST.dca[k].name).join(', '):'none'} · Mute group: ${b.mg.length?b.mg.map(k=>k+' '+MGNAME[k-1]).join(', '):'none'}`;p.appendChild(info);}
+  p.appendChild(assignRows(b));if(id==='b7')p.appendChild(fxBlock());}
 function renderSelDca(p,k){const d=ST.dca[k];p.innerHTML=head(d,'DCA '+k);
   const mem=[...ST.inputs.filter(x=>x.dca.includes(+k)).map(x=>(typeof x.num==='number'?'Ch '+x.num+' ':'')+(x.name||'')),...Object.values(ST.buses).filter(b=>b.dca.includes(+k)).map(b=>'Bus '+b.num+' '+b.name)];
   p.innerHTML+=`<p class="note">A DCA moves and mutes its members without carrying audio itself. Members: ${mem.length?mem.map(esc).join(', '):'none'}.</p><p class="note">On the real desk, press this DCA's SEL to see its members light up.</p>`;}
@@ -729,7 +751,7 @@ const ADV_DRILLS=[
 ];
 let drill=null,dTimer=null,lastDrill=null;
 function startDrill(){
-  ST=serviceState();indexState();
+  ST=serviceState();indexState();SOLO.clear();
   let pool=(ADV?ADV_DRILLS:DRILLS).filter(d=>d.id!==lastDrill);const d=pool[Math.floor(Math.random()*pool.length)];lastDrill=d.id;
   d.apply(ST);drill={d,t0:Date.now(),hint:false,done:false};
   setSeg(d.seg||'pw',true);
@@ -865,12 +887,44 @@ function advTick(){if(!ADV||!AC)return;const h=hasProc();if(!h)return;
 $('#advBtn').onclick=()=>{ADV=!ADV;$('#advBtn').classList.toggle('on',ADV);if(ADV&&sel&&sel.t==='in'&&!IN[sel.id].proc)sel={t:'in',id:'c23'};selTab=ADV?'eq':'route';renderAll();
   toast(ADV?'Stage 4 on: tap SEL, then EQ, Compressor or HPF & Gate. Drills now practise EQ and dynamics.':'Stage 4 off.',4000);};
 
+
+/* ================= solo, DCA/mute-group assignment, FX 4 ================= */
+const SOLO=new Set();
+function soloKey(it){if(it.t==='in')return 'in:'+it.id;if(it.t==='bus')return 'bus:'+it.id;if(it.t==='mtx'&&it.id==='m1')return 'mtx:m1';if(it.t==='main')return 'main';return null;}
+function toggleSolo(k){if(SOLO.has(k))SOLO.delete(k);else SOLO.add(k);applyListen();renderAll();}
+function assignRows(o){const w=el('div','');w.style.margin='6px 0';
+  const r1=el('div','asg','<span class="sub">DCA</span>');for(let k=1;k<=8;k++){const on=o.dca.includes(k);const b=el('button',on?'on':'',k+' '+esc(ST.dca[k].name));b.title='Add to or remove from DCA '+k;
+    b.onclick=()=>{if(o.dca.includes(k))o.dca=o.dca.filter(v=>v!==k);else o.dca=[...o.dca,k].sort((a,b)=>a-b);changed();};r1.appendChild(b);}
+  const r2=el('div','asg','<span class="sub">Mute groups</span>');for(let k=1;k<=6;k++){const on=o.mg.includes(k);const b=el('button','mg'+(on?' on':''),k+' '+MGNAME[k-1]);
+    b.onclick=()=>{if(o.mg.includes(k))o.mg=o.mg.filter(v=>v!==k);else o.mg=[...o.mg,k].sort((a,b)=>a-b);changed();};r2.appendChild(b);}
+  w.appendChild(r1);w.appendChild(r2);w.appendChild(el('div','note','Tap to add or remove. Load scene puts them back.'));return w;}
+const FACT=['1/4','3/8','1/2','2/3','1','4/3','3/2','2','3'];let taps=[];
+function fxBlock(){const s=ST.fx4,w=el('div','card');w.style.marginTop='10px';
+  w.innerHTML='<h3>FX 4 · Stereo delay</h3><p class="note" style="margin-top:0">Fed by Bus 7 (Delay2). Returns on FX return 7/8 into Bus 13/14 and the keys in-ear. Tap along with the song to set the time.</p>';
+  const row=el('div','row');const tb=el('button','tap','TAP');const out=el('span','lcd',Math.round(s.time)+' ms · '+(60000/s.time).toFixed(1)+' BPM');
+  tb.onclick=()=>{const now=performance.now();if(taps.length&&now-taps[taps.length-1]>2500)taps=[];taps.push(now);if(taps.length>5)taps.shift();
+    if(taps.length>=2){let sum=0;for(let i=1;i<taps.length;i++)sum+=taps[i]-taps[i-1];s.time=Math.max(10,Math.min(3000,Math.round(sum/(taps.length-1))));out.textContent=Math.round(s.time)+' ms · '+(60000/s.time).toFixed(1)+' BPM';tr.querySelector('input').value=s.time;tr.querySelector('output').textContent=s.time+' ms';changed('proc');}};
+  row.appendChild(tb);row.appendChild(out);w.appendChild(row);
+  const tr=rng('Time',10,3000,1,s.time,v=>{s.time=Math.round(v);out.textContent=Math.round(s.time)+' ms · '+(60000/s.time).toFixed(1)+' BPM';},v=>Math.round(v)+' ms',true);w.appendChild(tr);
+  const fr=el('div','row');fr.style.margin='6px 0';for(const side of['L','R']){const lab=el('span','sub','Factor '+side);const se=el('select','');se.style.cssText='background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px';
+    se.innerHTML=FACT.map(f=>`<option ${f===s['f'+side]?'selected':''}>${f}</option>`).join('');se.onchange=()=>{s['f'+side]=se.value;changed('proc');};fr.appendChild(lab);fr.appendChild(se);}
+  w.appendChild(fr);
+  w.appendChild(rng('Feedback L',0,100,1,s.feedL,v=>s.feedL=Math.round(v),v=>Math.round(v)+'%'));
+  w.appendChild(rng('Feedback R',0,100,1,s.feedR,v=>s.feedR=Math.round(v),v=>Math.round(v)+'%'));
+  w.appendChild(rng('Low cut',10,500,1,s.lo,v=>s.lo=Math.round(v),v=>fHz(v)+' Hz',true));
+  w.appendChild(rng('High cut',200,20000,1,s.hi,v=>s.hi=Math.round(v),v=>fHz(v)+' Hz',true));
+  w.appendChild(rng('Feed low cut',10,500,1,s.flo,v=>s.flo=Math.round(v),v=>fHz(v)+' Hz',true));
+  w.appendChild(rng('Feed high cut',200,20000,1,s.fhi,v=>s.fhi=Math.round(v),v=>fHz(v)+' Hz',true));
+  const rb=el('button','','Reset to scene');rb.onclick=()=>{ST.fx4=clone(SCENE.fx4);changed();};w.appendChild(rb);
+  return w;}
+$('#clrSolo').onclick=()=>{SOLO.clear();applyListen();renderAll();};
+
 /* ================= glue ================= */
 let touched=null;
 function linkSync(id){const o=oddOf(id);if(!o||!ST.linked[o])return;const a=IN[id],b=IN[LINK[id]];if(!a||!b)return;
   b.on=a.on;b.fader=a.fader;b.trim=a.trim;b.dca=[...a.dca];b.mg=[...a.mg];b.grp=Object.assign({},a.grp);
   for(const k in a.sends){const s=a.sends[k];b.sends[k]=Object.assign({},s);}if(a.proc&&b.proc)b.proc=clone(a.proc);wireSendTypes(b);}
-function changed(light){if(touched){linkSync(touched);touched=null;}if(AC){for(const x of ST.inputs)applyIn(x);for(const id in ST.buses)applyBus(id);applyMain();applyListen();}
+function changed(light){if(touched){linkSync(touched);touched=null;}if(AC)applyFX();if(AC){for(const x of ST.inputs)applyIn(x);for(const id in ST.buses)applyBus(id);applyMain();applyListen();}
   checkDrill();
   if(light==='proc')return;
   if(light==='drag'){renderPathsOnly();return;}
