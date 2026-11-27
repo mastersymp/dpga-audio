@@ -355,7 +355,7 @@ function buildAudio(){
   // inputs
   A.in={};A.pflBus=g(1);A.pflBus.connect(A.lis.pfl);
   for(const x of ST.inputs){const n={};
-    n.src=g(lin(CAL[x.id]||0));if(x.src&&SRC[x.src])SRC[x.src].connect(n.src);
+    n.src=g(lin(CAL[x.id]!=null?CAL[x.id]:-6));if(x.src&&SRC[x.src])SRC[x.src].connect(n.src);
     n.gate=g(1);n.trim=g(1);n.meter=an();n.mute=monoGain(1);n.fad=monoGain(1);
     n.pan=AC.createStereoPanner();
     n.src.connect(n.gate);n.gate.connect(n.trim);n.trim.connect(n.meter);(x.proc?buildInProc(x,n):n.trim).connect(n.mute);n.mute.connect(n.fad);n.fad.connect(n.pan);
@@ -387,8 +387,8 @@ const GATE_SRC=`class G extends AudioWorkletProcessor{constructor(){super();this
 process(inp,out){const y=out[0]&&out[0][0];if(!y)return true;const x=inp[0]&&inp[0][0];if(!x){y.fill(0);return true;}const k=(this.p.key&&inp[1]&&inp[1][0])?inp[1][0]:x;const p=this.p,sr=sampleRate;
 if(!p.on){y.set(x);this.g=1;this.post(1,x.length);return true;}
 const thr=Math.pow(10,p.thr/20),fl=Math.pow(10,-p.range/20),aC=Math.exp(-1/(sr*Math.max(p.att,.05)/1000)),rC=Math.exp(-1/(sr*Math.max(p.rel,5)/1000)),dC=Math.exp(-1/(sr*.008)),hS=p.hold*sr/1000;
-for(let i=0;i<x.length;i++){const a=Math.abs(k[i]);this.env=a>this.env?a:this.env*dC;const open=this.env>thr;let tgt;
- if(p.mode==='DUCK'){tgt=open?fl:1;}else{if(open)this.hc=hS;else if(this.hc>0)this.hc--;tgt=(open||this.hc>0)?1:fl;}
+const cl=thr*.63,mh=Math.max(hS,sr*.015);for(let i=0;i<x.length;i++){const a=Math.abs(k[i]);this.env=a>this.env?a:this.env*dC;const open=this.env>(this.op?cl:thr);this.op=open;let tgt;
+ if(p.mode==='DUCK'){tgt=open?fl:1;}else{if(open)this.hc=mh;else if(this.hc>0)this.hc--;tgt=(open||this.hc>0)?1:fl;}
  this.g=tgt>this.g?tgt+(this.g-tgt)*aC:tgt+(this.g-tgt)*rC;if(p.mode==='DUCK'&&tgt<this.g)this.g=tgt+(this.g-tgt)*aC;y[i]=x[i]*this.g;if(this.g<this.mn)this.mn=this.g;}
 this.post(null,x.length);return true;}
 post(v,len){this.n+=len;if(this.n>=2048){this.port.postMessage(20*Math.log10(Math.max(v||this.mn,1e-5)));this.n=0;this.mn=1;}}}
@@ -400,8 +400,8 @@ function fallbackGate(n){const merger=AC.createChannelMerger(2),sp=AC.createScri
   sp.onaudioprocess=e=>{const x=e.inputBuffer.getChannelData(0),kk=e.inputBuffer.getChannelData(1),y=e.outputBuffer.getChannelData(0),p=s.p,sr=AC.sampleRate;
     if(!p.on){y.set(x);s.g=1;n.gr=0;return;}const k=p.key?kk:x;
     const thr=Math.pow(10,p.thr/20),fl=Math.pow(10,-p.range/20),aC=Math.exp(-1/(sr*Math.max(p.att,.05)/1000)),rC=Math.exp(-1/(sr*Math.max(p.rel,5)/1000)),dC=Math.exp(-1/(sr*.008)),hS=p.hold*sr/1000;let mn=1;
-    for(let i=0;i<x.length;i++){const a=Math.abs(k[i]);s.env=a>s.env?a:s.env*dC;const open=s.env>thr;let tgt;
-      if(p.mode==='DUCK'){tgt=open?fl:1;}else{if(open)s.hc=hS;else if(s.hc>0)s.hc--;tgt=(open||s.hc>0)?1:fl;}
+    const cl=thr*.63,mh=Math.max(hS,sr*.015);for(let i=0;i<x.length;i++){const a=Math.abs(k[i]);s.env=a>s.env?a:s.env*dC;const open=s.env>(s.op?cl:thr);s.op=open;let tgt;
+      if(p.mode==='DUCK'){tgt=open?fl:1;}else{if(open)s.hc=mh;else if(s.hc>0)s.hc--;tgt=(open||s.hc>0)?1:fl;}
       s.g=tgt>s.g?tgt+(s.g-tgt)*aC:tgt+(s.g-tgt)*rC;if(p.mode==='DUCK'&&tgt<s.g)s.g=tgt+(s.g-tgt)*aC;y[i]=x[i]*s.g;if(s.g<mn)mn=s.g;}
     n.gr=20*Math.log10(Math.max(mn,1e-5));};
   return {merger,sp,p:s.p};}
@@ -445,7 +445,7 @@ function buildBusProc(node,pr){const e=eqBlock(),c=compBlock();node.in.disconnec
 function applyBusProc(node,pr){if(!node||!node.eqb||!pr)return;setEq(node.eqb,pr);setComp(node.cmp,pr.dyn);}
 // feedback loop: the wedge (S16 out 1) leaks back into the lead mic through the room
 // source level calibration so each input hits the scene's gate/comp thresholds the way real mics would
-const CAL={"c1": 2.6, "c2": 2.8, "c3": -0.7, "c5": 3.4, "c6": 3.4, "c7": 3.4, "c8": 3.4, "c9": -14.3, "c10": -22.5, "c15": 7.3, "c16": 6.0, "c17": -8.7, "c18": -8.3, "c19": 13.7, "c20": 12.9, "c21": 11.4, "c22": 8.5, "c23": 5.3, "c24": 12.4};
+const CAL={"c1": -9.4, "c2": -9.2, "c3": -12.7, "c5": -8.6, "c6": -8.6, "c7": -8.6, "c8": -8.6, "c9": -26.3, "c10": -34.5, "c15": -4.7, "c16": -6.0, "c17": -20.7, "c18": -20.3, "c19": 1.7, "c20": 0.9, "c21": -0.6, "c22": -3.5, "c23": -6.7, "c24": 0.4, "c27": -6, "c28": -6, "c25": -6};
 const FB={f:2500,coupleDb:-17};
 function buildFeedback(){const r=AC.createDelay(.1);r.delayTime.value=.011;const pk=AC.createBiquadFilter();pk.type='peaking';pk.frequency.value=FB.f;pk.Q.value=9;pk.gain.value=15;
   const bp=AC.createBiquadFilter();bp.type='bandpass';bp.frequency.value=FB.f;bp.Q.value=1.2;
@@ -896,14 +896,14 @@ function setSeg(s,quiet){seg=s;document.querySelectorAll('#segBtns button').forE
 document.querySelectorAll('#lisBtns button').forEach(b=>b.onclick=()=>setListen(b.dataset.l));
 document.querySelectorAll('#segBtns button').forEach(b=>b.onclick=()=>setSeg(b.dataset.seg));
 $('#iemSel').onchange=()=>{applyListen();if(listen!=='iem')setListen('iem');};
-$('#vol').oninput=()=>{if(A.vol)setP(A.vol.gain,(+$('#vol').value/100)**2);};
+$('#vol').oninput=()=>{if(A.vol)setP(A.vol.gain,(+$('#vol').value/100)**2*2);};
 $('#playBtn').onclick=async()=>{if(!AC)return;if(AC.state==='running'){await AC.suspend();$('#playBtn').textContent='▶ Play';}else{await AC.resume();$('#playBtn').textContent='⏸ Pause';}};
 // meters
 const buf=new Float32Array(512);
 function meterLoop(){for(const m of meters){const a=m.an();if(!a)continue;a.getFloatTimeDomainData(buf);let pk=0;for(let i=0;i<buf.length;i+=2){const v=Math.abs(buf[i]);if(v>pk)pk=v;}
   const db=pk>0?20*Math.log10(pk):-90;const h=Math.max(0,Math.min(1,(db+60)/60));const prev=m.h||0;const nh=h>prev?h:prev*.9+h*.1;m.h=nh;m.el.style.height=(nh*100)+'%';}
   advTick();requestAnimationFrame(meterLoop);}
-$('#startBtn').onclick=async()=>{$('#start').remove();AC=new (window.AudioContext||window.webkitAudioContext)();await loadWorklet();buildAudio();setP(A.vol.gain,(+$('#vol').value/100)**2);startCrowd();startSeq();await AC.resume();renderAll();meterLoop();};
+$('#startBtn').onclick=async()=>{$('#start').remove();AC=new (window.AudioContext||window.webkitAudioContext)();await loadWorklet();buildAudio();setP(A.vol.gain,(+$('#vol').value/100)**2*2);startCrowd();startSeq();await AC.resume();renderAll();meterLoop();};
 renderAll();
 </script>
 </body>
