@@ -135,6 +135,7 @@
     <ul class="note" style="padding-left:18px">
       <li>Use <b>headphones</b>. The stream is stereo; the house is mono.</li>
       <li><b>Listen</b> switches what you hear: the house, the stream, a wedge, an in-ear, or the selected channel (PFL).</li>
+      <li>Faders follow your finger without jumping. Turn on <b>Fine faders</b> for small moves, and double-tap a fader for 0 dB.</li>
       <li>Tap <b>SEL</b> on any strip to see its sends and where its signal stops.</li>
       <li><b>Drills</b> break one thing for you to find and fix.</li>
       <li><b>Stage 4</b> opens EQ, compressor and gate on every channel, with harder drills (including feedback).</li>
@@ -154,6 +155,7 @@
       <button data-seg="speak">Speaking</button>
     </div>
     <button id="playBtn">⏸ Pause</button>
+    <button id="fineBtn" title="Fine fader moves">Fine faders</button>
     <button id="advBtn" title="Stage 4">Stage 4: EQ &amp; dynamics</button>
   </div>
   <div class="row lis" style="margin-top:6px">
@@ -586,7 +588,7 @@ function makeStrip(it,side){
   const dbl=el('div','db',fmt(inf.fader));s.appendChild(dbl);
   const place=()=>{const v=objOf(it).fader;cap.style.top=(6+(1-db2pos(v))*(fd.clientHeight-12||138))+'px';dbl.textContent=fmt(v);};
   requestAnimationFrame(place);
-  dragFader(fd,(p)=>{if(it.t==='in')touched=it.id;const o=objOf(it);let d=pos2db(p);if(d<=-89)d=-90;o.fader=Math.round(d*10)/10;changed('drag');place();},()=>renderAll());
+  dragFader(fd,()=>db2pos(objOf(it).fader),(p)=>{if(it.t==='in')touched=it.id;const o=objOf(it);let d=pos2db(p);if(d<=-89)d=-90;o.fader=Math.round(d*10)/10;changed('drag');place();},()=>renderAll());
   const sk=soloKey(it);if(sk){const so=el('button','solo'+(SOLO.has(sk)?' on':''),'SOLO');so.onclick=()=>toggleSolo(sk);s.appendChild(so);}else{s.appendChild(el('div','solo-gap',''));}
   const mb=el('button','mute'+(!inf.on?' on':(inf.grpMute?' grp':'')),'MUTE');mb.onclick=()=>{if(it.t==='in')touched=it.id;const o=objOf(it);o.on=!o.on;changed();};s.appendChild(mb);
   if(it.t==='in')meters.push({side,el:m.firstChild,an:()=>A.in&&A.in[it.id].meter});
@@ -594,10 +596,14 @@ function makeStrip(it,side){
   else if(it.t==='main')meters.push({side,el:m.firstChild,an:()=>A.main&&A.main.meter});
   else if(it.t==='mtx'&&it.id==='m1')meters.push({side,el:m.firstChild,an:()=>A.mtx&&A.mtx.meter});
   return s;}
-function dragFader(fd,cb,done){let on=false;const upd=e=>{const r=fd.getBoundingClientRect();let p=1-(e.clientY-r.top-6)/(r.height-12);p=Math.max(0,Math.min(1,p));cb(p);};
-  fd.addEventListener('pointerdown',e=>{on=true;fd.setPointerCapture(e.pointerId);upd(e);e.preventDefault();});
-  fd.addEventListener('pointermove',e=>{if(on)upd(e);});
-  const end=()=>{if(on){on=false;if(done)done();}};fd.addEventListener('pointerup',end);fd.addEventListener('pointercancel',end);}
+// Faders move relative to your finger (no jumping to where you touch). Fine mode moves 5x slower. Double-tap = 0 dB.
+let FINE=false,lastTap=0;
+function dragFader(fd,getP,cb,done){let on=false,y0=0,p0=0,moved=false;
+  fd.addEventListener('pointerdown',e=>{on=true;moved=false;y0=e.clientY;p0=getP();fd.setPointerCapture(e.pointerId);e.preventDefault();});
+  fd.addEventListener('pointermove',e=>{if(!on)return;const dy=y0-e.clientY;if(Math.abs(dy)>2)moved=true;if(!moved)return;const r=fd.getBoundingClientRect();
+    const p=Math.max(0,Math.min(1,p0+dy/(r.height-12)*(FINE?.2:1)));cb(p);});
+  const end=()=>{if(!on)return;on=false;if(!moved){const now=Date.now();if(now-lastTap<350){cb(db2pos(0));lastTap=0;}else lastTap=now;}if(done)done();};
+  fd.addEventListener('pointerup',end);fd.addEventListener('pointercancel',end);}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function renderMG(){const r=$('#mgRow');r.innerHTML='<span class="sub" style="align-self:center">Mute groups</span>';
   ST.mg.forEach((v,i)=>{const b=el('button',v?'on':'',`${i+1} ${MGNAME[i]}`);b.onclick=()=>{ST.mg[i]=!ST.mg[i];changed();};r.appendChild(b);});}
@@ -917,6 +923,7 @@ function fxBlock(){const s=ST.fx4,w=el('div','card');w.style.marginTop='10px';
   w.appendChild(rng('Feed high cut',200,20000,1,s.fhi,v=>s.fhi=Math.round(v),v=>fHz(v)+' Hz',true));
   const rb=el('button','','Reset to scene');rb.onclick=()=>{ST.fx4=clone(SCENE.fx4);changed();};w.appendChild(rb);
   return w;}
+$('#fineBtn').onclick=()=>{FINE=!FINE;$('#fineBtn').classList.toggle('on',FINE);toast(FINE?'Fine faders on: they move 5× slower for small changes.':'Fine faders off.');};
 $('#clrSolo').onclick=()=>{SOLO.clear();applyListen();renderAll();};
 
 /* ================= glue ================= */
