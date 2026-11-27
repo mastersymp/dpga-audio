@@ -129,7 +129,7 @@
       <li><b>Stage 4</b> opens EQ, compressor and gate on every channel, with harder drills (including feedback).</li>
       <li>iPhone: turn the ringer switch on, or you'll hear nothing.</li>
     </ul>
-    <p class="note" id="srcNote">Band and voices: real DPGA multitrack recordings (about 20 MB, downloaded once).</p>
+    <p class="note" id="srcNote">Band and voices: real DPGA multitrack recordings (about 20 MB, downloaded once). Needs the app or the online link.</p>
     <div id="loadBar" class="note" hidden></div>
     <button class="big go" id="startBtn" style="width:100%">Start</button>
   </div>
@@ -141,7 +141,6 @@
     <div class="seg" id="segBtns">
       <button data-seg="pw" class="on">Praise &amp; Worship</button>
       <button data-seg="speak">Speaking</button>
-      <button data-seg="video">Video</button>
     </div>
     <button id="playBtn">⏸ Pause</button>
     <button id="advBtn" title="Stage 4">Stage 4: EQ &amp; dynamics</button>
@@ -315,34 +314,29 @@ function an(){const a=AC.createAnalyser();a.fftSize=512;return a;}
 
 function buildAudio(){
   if(!AC)AC=mkAC();
-  noiseBuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);
-  const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
   // output chain
   A.vol=g(.6);A.lim=AC.createDynamicsCompressor();A.lim.threshold.value=-4;A.lim.knee.value=0;A.lim.ratio.value=20;A.lim.attack.value=.001;A.lim.release.value=.12;
   A.limMk=g(lin(-autoMakeupDb(-4,0,20)));
   // soft clipper: clean up to -1 dBFS, rounds off anything above instead of hard clipping
   A.clip=AC.createWaveShaper();{const n=4096,cu=new Float32Array(n),th=.89;for(let i=0;i<n;i++){const x=i/(n-1)*2-1,ax=Math.abs(x);cu[i]=Math.sign(x)*(ax<=th?ax:th+(1-th)*Math.tanh((ax-th)/(1-th)));}A.clip.curve=cu;A.clip.oversample='2x';}
   A.vol.connect(A.lim);A.lim.connect(A.limMk);A.limMk.connect(A.clip);A.clip.connect(AC.destination);
-  A.lis={};for(const k of['house','stream','wedge','iem','pfl']){A.lis[k]=g(0);A.lis[k].connect(A.vol);}
+  A.lis={};for(const k of['house','stream','wedge','iem','pfl']){A.lis[k]=g(1);A.lis[k]._to=A.vol;A.lis[k]._c=false;}
   // sources
-  for(const k of['kick','snare','hat','tom1','tom2','tom3','tom4','tom5','bass','keysL','keysR','podium','headset','bgv1','bgv2','bgv3','bgv4','bgv5','lead','crowdA','crowdB','laptop','zoomL','zoomR'])SRC[k]=g(.3);
   // bass DI split: lo and hi
-  const lo=AC.createBiquadFilter();lo.type='lowpass';lo.frequency.value=260;SRC.bass.connect(lo);SRC.basslo=g(1.3);lo.connect(SRC.basslo);
-  const hi=AC.createBiquadFilter();hi.type='highpass';hi.frequency.value=180;SRC.bass.connect(hi);SRC.basshi=g(1.1);hi.connect(SRC.basshi);
   // buses
   A.bus={};
   for(const id of BUSORDER){const b=ST.buses[id];const n={};n.in=monoGain(1);n.mute=g(1);n.fad=g(1);n.meter=an();
-    n.in.connect(n.mute);n.mute.connect(n.fad);n.fad.connect(n.meter);A.bus[id]=n;}
+    n.in.connect(n.mute);n.mute.connect(n.fad);n.meter._src=n.fad;A.bus[id]=n;}
   for(const id of['b9','b11','b13','b15']){const n={};n.in=stereoGain(1);n.mute=stereoGain(1);n.fad=stereoGain(1);n.meter=an();
-    n.in.connect(n.mute);n.mute.connect(n.fad);n.fad.connect(n.meter);A.bus[id]=n;}
+    n.in.connect(n.mute);n.mute.connect(n.fad);n.meter._src=n.fad;A.bus[id]=n;}
   // main LR
   A.main={in:stereoGain(1),mute:stereoGain(1),fad:stereoGain(1),meter:an()};
-  A.main.in.connect(A.main.mute);A.main.mute.connect(A.main.fad);A.main.fad.connect(A.main.meter);
+  A.main.in.connect(A.main.mute);A.main.mute.connect(A.main.fad);A.main.meter._src=A.main.fad;
   A.houseMono=monoGain(1);A.main.fad.connect(A.houseMono);A.mainMx=stereoGain(0);A.main.fad.connect(A.mainMx);
   A.aesHouse=g(1);A.houseMono.connect(A.aesHouse);A.aesHouse.connect(A.lis.house);
   // matrix 1/2 stream
   A.mtx={in:stereoGain(1),mute:stereoGain(1),fad:stereoGain(1),meter:an()};
-  {A.mainMx.connect(A.mtx.in);const e=eqBlock(),c=compBlock();A.mtx.in.connect(e.in);e.out.connect(c.in);c.out.connect(A.mtx.mute);A.mtx.eqb=e;A.mtx.cmp=c;}A.mtx.mute.connect(A.mtx.fad);A.mtx.fad.connect(A.mtx.meter);A.mtx.fad.connect(A.lis.stream);
+  {A.mainMx.connect(A.mtx.in);const e=eqBlock(),c=compBlock();A.mtx.in.connect(e.in);e.out.connect(c.in);c.out.connect(A.mtx.mute);A.mtx.eqb=e;A.mtx.cmp=c;}A.mtx.mute.connect(A.mtx.fad);A.mtx.meter._src=A.mtx.fad;A.mtx.fad.connect(A.lis.stream);
   // stereo buses -> LR and MTX
   for(const id of['b9','b11','b13','b15','b8','b2']){const n=A.bus[id];
     let srcN=n.fad;
@@ -362,15 +356,15 @@ function buildAudio(){
   // inputs
   A.in={};A.pflBus=g(1);A.pflBus.connect(A.lis.pfl);
   for(const x of ST.inputs){const n={};
-    n.src=g(lin(CAL[x.id]!=null?CAL[x.id]:-6));if(x.src&&SRC[x.src])SRC[x.src].connect(n.src);n.stem=g(1);
+    n.stem=g(1);if(x.fx&&SRC[x.src])SRC[x.src].connect(n.stem);
     n.gate=g(1);n.trim=g(1);n.meter=an();n.mute=monoGain(1);n.fad=monoGain(1);
     n.pan=AC.createStereoPanner();
-    n.src.connect(n.gate);n.stem.connect(n.gate);n.gate.connect(n.trim);n.trim.connect(n.meter);(x.proc&&x.src?buildInProc(x,n):n.trim).connect(n.mute);n.mute.connect(n.fad);n.fad.connect(n.pan);
+    n.stem.connect(n.gate);n.gate.connect(n.trim);(x.proc&&x.src?buildInProc(x,n):n.trim).connect(n.mute);n.mute.connect(n.fad);n.fad.connect(n.pan);
     n.sends={};
-    for(let b=1;b<=8;b++){const s=monoGain(0);n.sends[b]=s;s.connect(A.bus['b'+b].in);}
-    n.grp={};for(const p of[9,11,13,15]){const s=stereoGain(0);n.grp[p]=s;n.pan.connect(s);s.connect(A.bus['b'+p].in);}
-    n.pfl=g(0);(n.post||n.trim).connect(n.pfl);n.pfl.connect(A.pflBus);
-    A.in[x.id]=n;wireSendTypes(x);}
+    for(let b=1;b<=8;b++){const s=monoGain(0);n.sends[b]=s;s._to=A.bus['b'+b].in;s._c=false;}
+    n.grp={};for(const p of[9,11,13,15]){const s=stereoGain(0);n.grp[p]=s;n.pan.connect(s);s._to=A.bus['b'+p].in;s._c=false;}
+    n.pfl=g(0);(n.post||n.trim).connect(n.pfl);n.pfl._to=A.pflBus;n.pfl._c=false;
+    n.meter._src=n.trim;A.in[x.id]=n;wireSendTypes(x);}
   if(A.in.c1&&A.in.c9&&A.in.c9.kf)A.in.c1.trim.connect(A.in.c9.kf);
   for(const id of['b1','b2','b3','b4','b5','b6','b7','b8','b9','b11','b13','b15'])if(ST.buses[id].proc)buildBusProc(A.bus[id],ST.buses[id].proc);
   A.main.in.disconnect();const me=eqBlock(),mc=compBlock();A.main.in.connect(me.in);me.out.connect(mc.in);mc.out.connect(A.main.mute);A.main.eqb=me;A.main.cmp=mc;
@@ -415,13 +409,13 @@ function fallbackGate(n){const merger=AC.createChannelMerger(2),sp=AC.createScri
   return {merger,sp,p:s.p};}
 async function loadWorklet(){try{const u=URL.createObjectURL(new Blob([GATE_SRC],{type:'application/javascript'}));await AC.audioWorklet.addModule(u);WORKLET=true;}catch(e){WORKLET=false;}}
 const EQT={LCut:'highpass',HCut:'lowpass',LShv:'lowshelf',HShv:'highshelf',PEQ:'peaking',VEQ:'peaking'};
-function eqBlock(){const b={in:g(1),out:g(1),dry:g(0),wet:g(1),bands:[],live:true};let last=b.in;
-  for(let i=0;i<4;i++){const f=AC.createBiquadFilter();last.connect(f);last=f;b.bands.push(f);}last.connect(b.wet);b.wet.connect(b.out);b.in.connect(b.dry);b.dry.connect(b.out);return b;}
-function compBlock(){const c={in:g(1),out:g(1),dry:g(0),wet:g(1),comp:AC.createDynamicsCompressor(),mk:g(1),live:true};c.in.connect(c.comp);c.comp.connect(c.mk);c.mk.connect(c.wet);c.wet.connect(c.out);c.in.connect(c.dry);c.dry.connect(c.out);return c;}
+function eqBlock(){const b={in:g(1),out:g(1),dry:g(0),wet:g(1),bands:[],live:false};let last=b.in;
+  for(let i=0;i<4;i++){const f=AC.createBiquadFilter();if(i)last.connect(f);last=f;b.bands.push(f);}b.wet.connect(b.out);b.in.connect(b.dry);b.dry.connect(b.out);return b;}
+function compBlock(){const c={in:g(1),out:g(1),dry:g(0),wet:g(1),comp:AC.createDynamicsCompressor(),mk:g(1),live:false};c.comp.connect(c.mk);c.wet.connect(c.out);c.in.connect(c.dry);c.dry.connect(c.out);return c;}
 function setEq(b,pr){if(!pr||!pr.eq)return;pr.eq.forEach((e,i)=>{const f=b.bands[i];f.type=EQT[e.t]||'peaking';setP(f.frequency,e.f);
   if(f.type==='highpass'||f.type==='lowpass'){setP(f.Q,.707);setP(f.gain,0);}else if(f.type==='peaking'){setP(f.Q,e.q);setP(f.gain,e.g);}else{setP(f.Q,.707);setP(f.gain,e.g);} });
   setP(b.wet.gain,pr.eqOn?1:0);setP(b.dry.gain,pr.eqOn?0:1);
-  if(pr.eqOn&&!b.live){b.in.connect(b.bands[0]);b.live=true;}else if(!pr.eqOn&&b.live){try{b.in.disconnect(b.bands[0]);}catch(e){}b.live=false;}}
+  if(pr.eqOn&&!b.live){b.in.connect(b.bands[0]);b.bands[3].connect(b.wet);try{b.dry.disconnect(b.out);}catch(e){}b.live=true;}else if(!pr.eqOn&&b.live){try{b.in.disconnect(b.bands[0]);}catch(e){}try{b.bands[3].disconnect(b.wet);}catch(e){}b.dry.connect(b.out);b.live=false;}}
 // Browsers' DynamicsCompressor adds hidden automatic make-up gain (Chromium/WebKit kernel). The X32 doesn't, so we cancel it.
 function autoMakeupDb(thr,knee,ratio){const l2d=x=>20*Math.log10(Math.max(x,1e-12)),d2l=x=>Math.pow(10,x/20);const lt=d2l(thr);
   const kc=(x,k)=>x<lt?x:lt+(1-Math.exp(-k*(x-lt)))/k;
@@ -432,11 +426,11 @@ function autoMakeupDb(thr,knee,ratio){const l2d=x=>20*Math.log10(Math.max(x,1e-1
 function setComp(c,d){if(!d)return;const k=c.comp;setP(k.threshold,Math.max(-100,d.thr));setP(k.ratio,Math.min(20,Math.max(1,d.ratio)));setP(k.knee,Math.min(40,d.knee*2));
   k.attack.setValueAtTime(Math.max(.001,d.att/1000),T());k.release.setValueAtTime(Math.min(1,Math.max(.01,d.rel/1000)),T());{const thr=Math.max(-100,d.thr),r=Math.min(20,Math.max(1,d.ratio)),kn=Math.min(40,d.knee*2);setP(c.mk.gain,lin(d.gain-autoMakeupDb(thr,kn,r)));}
   setP(c.wet.gain,d.on?1:0);setP(c.dry.gain,d.on?0:1);
-  if(d.on&&!c.live){c.in.connect(c.comp);c.live=true;}else if(!d.on&&c.live){try{c.in.disconnect(c.comp);}catch(e){}c.live=false;}}
+  if(d.on&&!c.live){c.in.connect(c.comp);c.mk.connect(c.wet);try{c.dry.disconnect(c.out);}catch(e){}c.live=true;}else if(!d.on&&c.live){try{c.in.disconnect(c.comp);}catch(e){}try{c.mk.disconnect(c.wet);}catch(e){}c.dry.connect(c.out);c.live=false;}}
 // build input processing; returns output node
 function buildInProc(x,n){
   n.h1=AC.createBiquadFilter();n.h2=AC.createBiquadFilter();n.h1.type=n.h2.type='highpass';n.hdry=g(0);n.hwet=g(1);n.hout=g(1);
-  n.trim.connect(n.h1);n.h1.connect(n.h2);n.h2.connect(n.hwet);n.hwet.connect(n.hout);n.trim.connect(n.hdry);n.hdry.connect(n.hout);
+  n.trim.connect(n.h1);n.h1.connect(n.h2);n.h2.connect(n.hwet);n.hlive=true;n.hwet.connect(n.hout);n.trim.connect(n.hdry);n.hdry.connect(n.hout);
   let after=n.hout;
   n.kf=AC.createBiquadFilter();n.kf.type='allpass';if(!(x.proc.gate&&x.proc.gate.key))n.hout.connect(n.kf);
   if(WORKLET){n.gw=new AudioWorkletNode(AC,'dpga-gate',{numberOfInputs:2,numberOfOutputs:1,outputChannelCount:[1]});n.hout.connect(n.gw,0,0);n.gw.port.onmessage=e=>{n.gr=e.data;};n.setGate=q=>n.gw.port.postMessage(q);n.kf.connect(n.gw,0,1);after=n.gw;}
@@ -448,7 +442,8 @@ function wireOrder(x,n){if(!n.eqb)return;try{n.procIn.disconnect();}catch(e){}tr
   if(pre){n.procIn.connect(n.cmp.in);n.cmp.out.connect(n.eqb.in);n.eqb.out.connect(n.post);}else{n.procIn.connect(n.eqb.in);n.eqb.out.connect(n.cmp.in);n.cmp.out.connect(n.post);}
   if(n.rtaTap)n.post.connect(n.rtaTap);}
 function applyInProc(x){const n=A.in&&A.in[x.id];if(!n||!n.eqb||!x.proc)return;const p=x.proc;
-  if(p.hpf){setP(n.h1.frequency,p.hpf.f);setP(n.h2.frequency,p.hpf.f);setP(n.hwet.gain,p.hpf.on?1:0);setP(n.hdry.gain,p.hpf.on?0:1);}
+  if(p.hpf){setP(n.h1.frequency,p.hpf.f);setP(n.h2.frequency,p.hpf.f);setP(n.hwet.gain,p.hpf.on?1:0);setP(n.hdry.gain,p.hpf.on?0:1);
+    if(p.hpf.on&&!n.hlive){n.trim.connect(n.h1);n.h2.connect(n.hwet);n.hlive=true;}else if(!p.hpf.on&&n.hlive!==false){try{n.trim.disconnect(n.h1);}catch(e){}try{n.h2.disconnect(n.hwet);}catch(e){}n.hlive=false;}}
   if(n.kf&&p.gate){const k=p.gate.kf;if(!k||!k.on){n.kf.type='allpass';}else if(/^LC/.test(k.t)){n.kf.type='highpass';setP(n.kf.Q,.707);}else if(/^HC/.test(k.t)){n.kf.type='lowpass';setP(n.kf.Q,.707);}else{n.kf.type='bandpass';setP(n.kf.Q,parseFloat(k.t)||2);}if(k)setP(n.kf.frequency,k.f);}
   if(n.setGate&&p.gate)n.setGate(Object.assign({},p.gate,{key:true}));
   setEq(n.eqb,p);setComp(n.cmp,p.dyn);}
@@ -456,8 +451,6 @@ function buildBusProc(node,pr){const e=eqBlock(),c=compBlock();node.in.disconnec
   for(const f of e.bands){f.channelCountMode='max';}return node;}
 function applyBusProc(node,pr){if(!node||!node.eqb||!pr)return;setEq(node.eqb,pr);setComp(node.cmp,pr.dyn);}
 // feedback loop: the wedge (S16 out 1) leaks back into the lead mic through the room
-// source level calibration so each input hits the scene's gate/comp thresholds the way real mics would
-const CAL={"c1": -9.4, "c2": -9.2, "c3": -12.7, "c5": -8.6, "c6": -8.6, "c7": -8.6, "c8": -8.6, "c9": -26.3, "c10": -34.5, "c15": -4.7, "c16": -6.0, "c17": -20.7, "c18": -20.3, "c19": 1.7, "c20": 0.9, "c21": -0.6, "c22": -3.5, "c23": -6.7, "c24": 0.4, "c27": -6, "c28": -6, "c25": -6};
 const FB={f:2500,coupleDb:-17};
 function buildFeedback(){const r=AC.createDelay(.1);r.delayTime.value=.011;const pk=AC.createBiquadFilter();pk.type='peaking';pk.frequency.value=FB.f;pk.Q.value=9;pk.gain.value=15;
   const bp=AC.createBiquadFilter();bp.type='bandpass';bp.frequency.value=FB.f;bp.Q.value=1.2;
@@ -470,6 +463,13 @@ function loopGainDb(){if(!A.in)return -99;const x=IN.c23,n=A.in.c23,b=ST.buses.b
   let d=x.trim+(x.proc.hpf.on?respDb(n.h1,FB.f)+respDb(n.h2,FB.f):0)+eqDbAt(n.eqb,x.proc.eqOn,FB.f)+(x.proc.dyn.on?x.proc.dyn.gain:0)+s.lvl+(s.type==='POST'?inGainDb(x):0)+busGainDb(b)+eqDbAt(A.bus.b1.eqb,b.proc.eqOn,FB.f)+FB.coupleDb+respDb(A.fbPeak,FB.f)+respDb(A.fbBp,FB.f);
   return d;}
 
+
+// connect a node to its target only while needed: unconnected nodes aren't processed, which saves the phone's CPU
+function link(n,on){if(!n||!n._to)return;if(on&&!n._c){n.connect(n._to);n._c=true;}else if(!on&&n._c){try{n.disconnect(n._to);}catch(e){}n._c=false;}}
+function syncMeters(){if(!AC||!A.in)return;const need=new Set();for(const m of meters){const a=m.an();if(a)need.add(a);}
+  if(ADV){const h=hasProc();if(h&&h.n.meter)need.add(h.n.meter);}
+  const all=[...Object.values(A.in).map(n=>n.meter),...Object.values(A.bus).map(n=>n.meter),A.main.meter,A.mtx.meter];
+  for(const a of all){if(!a||!a._src)continue;const on=need.has(a);if(on&&!a._c){a._src.connect(a);a._c=true;}else if(!on&&a._c){try{a._src.disconnect(a);}catch(e){}a._c=false;}}}
 /* ================= effective values ================= */
 const mgOn=list=>list.some(k=>ST.mg[k-1]);
 const dcaMuted=list=>list.some(k=>!ST.dca[k].on);
@@ -482,14 +482,17 @@ function inGainDb(x){return x.fader<=-89?-200:x.fader+dcaDb(x.dca);}
 function busMuted(b){return !b.on||mgOn(b.mg)||dcaMuted(b.dca);}
 function busGainDb(b){return b.fader<=-89?-200:b.fader+dcaDb(b.dca);}
 const T=()=>AC.currentTime;
-function setP(p,v){p.setTargetAtTime(v,T(),.012);}
+function setP(p,v){if(p._v===v)return;p._v=v;p.cancelScheduledValues(T());p.setTargetAtTime(v,T(),.012);}
 
 function applyIn(x){const n=A.in&&A.in[x.id];if(!n)return;applyInProc(x);
   setP(n.gate.gain,gateOpen(x)?1:0);setP(n.trim.gain,lin(x.trim));
   setP(n.mute.gain,inMuted(x)?0:1);setP(n.fad.gain,lin(inGainDb(x)));
   setP(n.pan.pan,Math.max(-1,Math.min(1,x.pan/100)));
   for(let b=1;b<=8;b++){const s=x.sends[b];setP(n.sends[b].gain,s&&s.on?lin(s.lvl):0);}
-  for(const p of[9,11,13,15])setP(n.grp[p].gain,x.grp[p]?1:0);}
+  for(const p of[9,11,13,15])setP(n.grp[p].gain,x.grp[p]?1:0);
+  const live=x.fx||stemActive(x.id);
+  for(let b=1;b<=8;b++){const s=x.sends[b];link(n.sends[b],live&&!!s&&s.on&&s.lvl>-89);}
+  for(const p of[9,11,13,15])link(n.grp[p],live&&!!x.grp[p]);}
 function applyBus(id){const b=ST.buses[id],n=A.bus&&A.bus[id];if(!n)return;applyBusProc(n,b.proc);
   setP(n.mute.gain,busMuted(b)?0:1);setP(n.fad.gain,lin(busGainDb(b)));
   if(n.lr)setP(n.lr.gain,b.lr?1:0);if(n.mx)setP(n.mx.gain,b.mtxOn&&b.mtx!=null?lin(b.mtx):0);
@@ -501,72 +504,14 @@ function applyAll(){if(!AC)return;for(const x of ST.inputs){wireSendTypes(x);app
 /* ================= listen ================= */
 let listen='house',pflOn=false;
 function applyListen(){if(!AC)return;
-  for(const k in A.lis)setP(A.lis[k].gain,k===listen?1:0);
+  for(const k in A.lis)link(A.lis[k],k===listen);
   const iem='b'+$('#iemSel').value;for(const id in A.iemPick)setP(A.iemPick[id].gain,id===iem?1:0);
-  for(const id in A.in)setP(A.in[id].pfl.gain,(listen==='pfl'&&sel&&sel.t==='in'&&sel.id===id)?1:0);}
-
-/* ================= synth & sequencer ================= */
-const BPM=84,STEP=60/BPM/4;
-const mtof=m=>440*Math.pow(2,(m-69)/12);
-const CH=[[55,59,62,67],[54,57,62,66],[55,59,64,67],[55,60,64,67]];
-const BASS=[43,50,40,48];
-const MEL=[[[0,71,4],[4,69,4],[8,67,6],[14,67,2]],[[0,66,4],[4,67,2],[6,69,6],[12,66,4]],[[0,67,4],[4,71,4],[8,74,6],[14,72,2]],[[0,72,4],[4,71,4],[8,69,8]]];
-const BGV={bgv1:[74,74,71,72],bgv2:[71,69,67,67],bgv3:[67,66,64,64],bgv4:[62,62,59,60],bgv5:[67,66,67,67]};
-const BGVLV={bgv1:4.5,bgv2:1.6,bgv3:.6,bgv4:.9,bgv5:1.2};
-const VOW={a:[800,1150,2900],o:[450,800,2830],u:[325,700,2530],e:[400,2000,2550],i:[300,2300,3000]};
-function env(gn,t,a,peak,dur,rel){gn.gain.setValueAtTime(0,t);gn.gain.linearRampToValueAtTime(peak,t+a);gn.gain.setValueAtTime(peak,t+Math.max(a,dur));gn.gain.exponentialRampToValueAtTime(.0001,t+Math.max(a,dur)+rel);}
-function noise(t,dur){const s=AC.createBufferSource();s.buffer=noiseBuf;s.loop=true;s.start(t,Math.random()*1.5);s.stop(t+dur+.05);return s;}
-function kick(t){const o=AC.createOscillator(),e=g(0);o.frequency.setValueAtTime(130,t);o.frequency.exponentialRampToValueAtTime(42,t+.12);o.connect(e);e.connect(SRC.kick);env(e,t,.002,1,.02,.35);o.start(t);o.stop(t+.45);
-  const n=noise(t,.02),f=AC.createBiquadFilter(),e2=g(0);f.type='highpass';f.frequency.value=2500;n.connect(f);f.connect(e2);e2.connect(SRC.kick);env(e2,t,.001,.25,.003,.02);}
-function snare(t){const n=noise(t,.25),f=AC.createBiquadFilter(),e=g(0);f.type='highpass';f.frequency.value=1200;n.connect(f);f.connect(e);e.connect(SRC.snare);env(e,t,.001,.7,.01,.18);
-  const o=AC.createOscillator(),e2=g(0);o.type='triangle';o.frequency.value=190;o.connect(e2);e2.connect(SRC.snare);env(e2,t,.001,.6,.01,.08);o.start(t);o.stop(t+.15);}
-function hat(t,open){const n=noise(t,.3),f=AC.createBiquadFilter(),e=g(0);f.type='highpass';f.frequency.value=7500;n.connect(f);f.connect(e);e.connect(SRC.hat);env(e,t,.001,.35,.005,open?.18:.045);}
-function tom(t,which,f0){const o=AC.createOscillator(),e=g(0);o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f0*.62,t+.3);o.connect(e);e.connect(SRC[which]);env(e,t,.002,.9,.02,.4);o.start(t);o.stop(t+.5);}
-function bass(t,m,dur){const o=AC.createOscillator(),f=AC.createBiquadFilter(),e=g(0);o.type='sawtooth';o.frequency.value=mtof(m);f.type='lowpass';f.frequency.value=900;f.Q.value=2;o.connect(f);f.connect(e);e.connect(SRC.bass);env(e,t,.008,.55,dur*.85,.08);o.start(t);o.stop(t+dur+.2);}
-function keys(t,notes,dur,side){for(const m of notes){for(const[type,amt,det]of[['triangle',.16,side==='L'?-4:4],['sawtooth',.05,side==='L'?6:-6]]){
-  const o=AC.createOscillator(),e=g(0),f=AC.createBiquadFilter();o.type=type;o.frequency.value=mtof(m);o.detune.value=det;f.type='lowpass';f.frequency.value=2400;o.connect(f);f.connect(e);e.connect(SRC['keys'+side]);env(e,t,.03,amt,dur,.5);o.start(t);o.stop(t+dur+.6);}}}
-function voice(dest,t,m,dur,vowel,peak,vib){const o=AC.createOscillator();o.type='sawtooth';o.frequency.value=mtof(m);
-  const l=AC.createOscillator(),lg=g(mtof(m)*.007);l.frequency.value=5.3+Math.random()*.6;l.connect(lg);lg.connect(o.frequency);
-  const e=g(0);const F=VOW[vowel];F.forEach((fr,i)=>{const b=AC.createBiquadFilter();b.type='bandpass';b.frequency.value=fr;b.Q.value=[9,11,14][i];const gg=g([1.6,.8,.4][i]);o.connect(b);b.connect(gg);gg.connect(e);});
-  e.connect(dest);env(e,t,.06,peak,dur,.18);o.start(t);l.start(t);o.stop(t+dur+.3);l.stop(t+dur+.3);}
-function laptop(t,step,bar){const c=CH[bar%4];if(step%2===0){const m=c[(step/2)%4]+12;const o=AC.createOscillator(),e=g(0);o.type='triangle';o.frequency.value=mtof(m);o.connect(e);e.connect(SRC.laptop);env(e,t,.005,.22,.05,.25);o.start(t);o.stop(t+.4);}
-  if(step===0){for(const m of c){const o=AC.createOscillator(),e=g(0);o.type='sine';o.frequency.value=mtof(m-12);o.connect(e);e.connect(SRC.laptop);env(e,t,.2,.12,STEP*14,.4);o.start(t);o.stop(t+STEP*16+.5);}}
-  if(step===0||step===8){const o=AC.createOscillator(),e=g(0);o.frequency.setValueAtTime(110,t);o.frequency.exponentialRampToValueAtTime(45,t+.1);o.connect(e);e.connect(SRC.laptop);env(e,t,.002,.5,.02,.25);o.start(t);o.stop(t+.35);}}
-// speech
-const SP={podium:{next:0,base:112},headset:{next:0,base:205}};
-function speechTick(who,until){const s=SP[who];if(s.next<T())s.next=T()+.05;
-  while(s.next<until){let t=s.next;const words=3+Math.floor(Math.random()*6);
-    for(let w=0;w<words;w++){const syl=1+Math.floor(Math.random()*3);
-      for(let k=0;k<syl;k++){const dur=.09+Math.random()*.16;const vs=Object.keys(VOW);const v=vs[Math.floor(Math.random()*vs.length)];
-        if(Math.random()<.5){const n=noise(t,.06),f=AC.createBiquadFilter(),e=g(0);f.type='bandpass';f.frequency.value=3500+Math.random()*2500;f.Q.value=1.5;n.connect(f);f.connect(e);e.connect(SRC[who]);env(e,t,.005,.25,.02,.04);t+=.04;}
-        const o=AC.createOscillator();o.type='sawtooth';const p=s.base*(1+(Math.random()-.5)*.25);o.frequency.setValueAtTime(p,t);o.frequency.linearRampToValueAtTime(p*(.9+Math.random()*.2),t+dur);
-        const e=g(0);VOW[v].forEach((fr,i)=>{const b=AC.createBiquadFilter();b.type='bandpass';b.frequency.value=fr*(who==='headset'?1.12:1);b.Q.value=[7,9,12][i];const gg=g([1.5,.8,.35][i]);o.connect(b);b.connect(gg);gg.connect(e);});
-        e.connect(SRC[who]);env(e,t,.015,.9,dur*.8,.05);o.start(t);o.stop(t+dur+.1);t+=dur+.02;}
-      t+=.05+Math.random()*.12;}
-    s.next=t+.35+Math.random()*.6;}}
-// crowd room tone
-function startCrowd(){for(const k of['crowdA','crowdB']){const n=AC.createBufferSource();n.buffer=noiseBuf;n.loop=true;const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=900;const e=g(.15);n.connect(f);f.connect(e);e.connect(SRC[k]);n.start();}}
-let step=0,nextT=0,timer=null;
-function schedule(){const until=T()+.25;if(nextT<T()-.02){const miss=Math.ceil((T()+.05-nextT)/STEP);nextT+=miss*STEP;step+=miss;}
-  while(nextT<until){const bar=Math.floor(step/16)%4,s=step%16,t=nextT;
-    if(seg==='pw'&&!STEMS){
-      if(s===0||s===8||(s===10&&bar%2===1))kick(t);
-      if(s===4||s===12)snare(t);
-      if(s%2===0)hat(t,s===14);
-      if(bar===3&&s>=12){tom(t,['tom2','tom3','tom4','tom5'][s-12],[210,170,135,105][s-12]);}
-      if([0,6,8,14].includes(s))bass(t,BASS[bar],STEP*(s===8?6:2));
-      if(s===0||s===8){keys(t,CH[bar],STEP*7.5,'L');keys(t,CH[bar].map(m=>m+(m<60?12:0)),STEP*7.5,'R');}
-      for(const[st,m,len]of MEL[bar])if(st===s)voice(SRC.lead,t,m,STEP*len*.95,'a',.42);
-      if(s===0)for(const k in BGV)voice(SRC[k],t,BGV[k][bar],STEP*15,'u',.2*BGVLV[k]);
-    } else if(seg==='video'){laptop(t,s,bar);}
-    nextT+=STEP;step++;}
-  if(seg==='speak'&&!STEMS){speechTick('podium',until);if(Math.random()<.01)speechTick('headset',until);} }
-function startSeq(){nextT=T()+.1;step=0;timer=setInterval(schedule,40);}
-
+  for(const id in A.in){const on=listen==='pfl'&&sel&&sel.t==='in'&&sel.id===id;setP(A.in[id].pfl.gain,on?1:0);link(A.in[id].pfl,on);}
+  syncMeters();}
 
 /* ================= real multitrack stems ================= */
 // Recorded at the desk's inputs, so they play at true input level (no calibration).
-const STEMSETS={pw:['c1','c2','c3','c5','c6','c7','c8','c9','c15','c16','c19','c21','c22','c23','c24'],speak:['c15','c16','c17','c25']};
+const STEMSETS={pw:['c1','c2','c3','c5','c6','c7','c8','c9','c15','c16','c17','c19','c21','c22','c23','c24'],speak:['c15','c16','c17','c25']};
 const STEMFEED={pw:{c9:['c9','c10']},speak:{c25:['c25','c27']}};   // one recording feeding two channels (bass DI split; skit/crowd mic)
 let STEMS=false,stemSet=null,stemBufs={},stemSrcs=[],stemLoading=null;
 async function loadStems(set,onProg){const ids=STEMSETS[set];let done=0;const bufs={};
@@ -578,12 +523,11 @@ function playStems(set){stopStems();const bufs=stemBufs[set];if(!bufs)return;con
   for(const id in bufs){const s=AC.createBufferSource();s.buffer=bufs[id];s.loop=true;
     for(const ch of(STEMFEED[set]&&STEMFEED[set][id])||[id]){if(A.in[ch])s.connect(A.in[ch].stem);}
     s.start(t0);stemSrcs.push(s);}
-  stemSet=set;}
+  stemSet=set;applyAll();}
 async function useStems(set){if(!STEMS)return;
-  if(set==='video'){stopStems();stemSet=null;return;}
   if(!stemBufs[set]){for(const k in stemBufs)if(k!==set)delete stemBufs[k];   // keep one set in memory
     stopStems();const my=stemLoading=set;toast('Loading the recordings…',60000);
-    try{const b=await loadStems(set);if(stemLoading!==my)return;stemBufs[set]=b;toast('Ready.');}catch(e){toast('Couldn’t load the recordings. Using the synthesized band.',4000);STEMS=false;return;}}
+    try{const b=await loadStems(set);if(stemLoading!==my)return;stemBufs[set]=b;toast('Ready.');}catch(e){toast('Couldn’t load the recordings. Check the connection and try again.',4000);return;}}
   if(seg===set)playStems(set);}
 function stemActive(id){if(!STEMS||!stemSet)return false;const set=STEMSETS[stemSet];if(set.includes(id))return true;const f=STEMFEED[stemSet]||{};return Object.values(f).some(a=>a.includes(id));}
 
@@ -606,7 +550,8 @@ function renderBank(side){const lay=side==='L'?LAY_L:LAY_R,cur=side==='L'?layL:l
   const L=$('#lay'+side);L.innerHTML='';lay.forEach(([n],i)=>{const b=el('button',i===cur?'on':'',n);b.onclick=()=>{if(side==='L')layL=i;else layR=i;renderBank(side);};L.appendChild(b);});
   const box=$('#strips'+side);box.innerHTML='';
   for(let i=meters.length-1;i>=0;i--)if(meters[i].side===side)meters.splice(i,1);
-  for(const it of lay[cur][1]()){box.appendChild(makeStrip(it,side));}}
+  for(const it of lay[cur][1]()){box.appendChild(makeStrip(it,side));}
+  syncMeters();}
 function makeStrip(it,side){
   if(it.t==='blank')return el('div','strip blank','');
   const s=el('div','strip');const inf=stripInfo(it);
@@ -639,8 +584,8 @@ function renderMG(){const r=$('#mgRow');r.innerHTML='<span class="sub" style="al
 function chip(txt,state){return `<span class="${state}">${state==='ok'?'✓ ':state==='bad'?'✗ ':''}${txt}</span>`;}
 const arrow='<i>›</i>';
 function inputChain(x){const c=[];
-  const playing=STEMS?(stemActive(x.id)||(x.src&&['crowdA','crowdB','laptop'].includes(x.src)&&srcActive(x.src))):(x.src&&srcActive(x.src));
-  c.push(chip(playing?(STEMS&&stemActive(x.id)?'Recording playing':'Source playing'):(x.src?'Nothing on this mic right now':'Nothing plugged in'),playing?'ok':(x.src?'off':'bad')));
+  const playing=stemActive(x.id)||!!x.fx;
+  c.push(chip(playing?(x.fx?'FX 4 return':'Recording playing'):(x.src?'Nothing recorded on this mic in this part':'Nothing plugged in'),playing?'ok':(x.src?'off':'bad')));
   if(x.stage)c.push(chip('S16 · AES50 B',ST.aes?'ok':'bad'));
   else if(!x.aux&&!x.fx)c.push(chip('Local input',x.cable?'ok':'bad'));
   if(x.stage)c.push(chip('Cable',x.cable?'ok':'bad'));
@@ -673,7 +618,6 @@ function buildPaths(x){const P=[['Input (before the fader)',inputChain(x)],['→
   if(x.sends[1])P.push(['→ Wedge (Bus 1)',monPath(x,1)]);
   for(const b of[3,4,5])if(x.sends[b]&&x.sends[b].on)P.push(['→ '+ST.buses['b'+b].name+' in-ear (Bus '+b+')',monPath(x,b)]);
   return P;}
-function srcActive(k){if(seg==='pw')return!['podium','headset','laptop','zoomL','zoomR'].includes(k);if(seg==='speak')return['podium','headset','crowdA','crowdB'].includes(k);if(seg==='video')return['laptop','crowdA','crowdB'].includes(k);return false;}
 
 /* ================= select panel ================= */
 function renderSelBase(p){if(!sel)return;
@@ -943,8 +887,7 @@ let toastT;function toast(t,ms){let e=$('#toast');if(!e){e=el('div','');e.id='to
   e.textContent=t;e.style.display='block';clearTimeout(toastT);toastT=setTimeout(()=>e.style.display='none',ms||2600);}
 function setListen(l){listen=l;document.querySelectorAll('#lisBtns button').forEach(b=>b.classList.toggle('on',b.dataset.l===l));applyListen();renderSel();}
 function setSeg(s,quiet){const prev=seg;seg=s;if(AC&&STEMS&&(s!==prev||!stemSet))useStems(s);document.querySelectorAll('#segBtns button').forEach(b=>b.classList.toggle('on',b.dataset.seg===s));if(AC)renderSel();
-  if(!quiet&&s==='speak'&&!IN.c17.on)toast('Speaking: the Podium (ch 17) is muted in the scene. Unmute it (layer 17-24).',5000);
-  if(!quiet&&s==='video'&&(!IN.a1.on||ST.mg[4]))toast('Video: unmute AUX 1 (Aux/FX layer) and mute group 5 (Aux ins).',5000);}
+  if(!quiet&&s==='speak'&&!IN.c17.on)toast('Speaking: the Podium (ch 17) is muted in the scene. Unmute it (layer 17-24).',5000);}
 document.querySelectorAll('#lisBtns button').forEach(b=>b.onclick=()=>setListen(b.dataset.l));
 document.querySelectorAll('#segBtns button').forEach(b=>b.onclick=()=>setSeg(b.dataset.seg));
 $('#iemSel').onchange=()=>{applyListen();if(listen!=='iem')setListen('iem');};
@@ -952,14 +895,14 @@ $('#vol').oninput=()=>{if(A.vol)setP(A.vol.gain,(+$('#vol').value/100)**2*2);};
 $('#playBtn').onclick=async()=>{if(!AC)return;if(AC.state==='running'){await AC.suspend();$('#playBtn').textContent='▶ Play';}else{await AC.resume();$('#playBtn').textContent='⏸ Pause';}};
 // meters
 const buf=new Float32Array(512);
-function meterLoop(){for(const m of meters){const a=m.an();if(!a)continue;a.getFloatTimeDomainData(buf);let pk=0;for(let i=0;i<buf.length;i+=2){const v=Math.abs(buf[i]);if(v>pk)pk=v;}
+function meterLoop(){if((meterLoop.f=(meterLoop.f||0)+1)%2){advTick();requestAnimationFrame(meterLoop);return;}for(const m of meters){const a=m.an();if(!a)continue;a.getFloatTimeDomainData(buf);let pk=0;for(let i=0;i<buf.length;i+=2){const v=Math.abs(buf[i]);if(v>pk)pk=v;}
   const db=pk>0?20*Math.log10(pk):-90;const h=Math.max(0,Math.min(1,(db+60)/60));const prev=m.h||0;const nh=h>prev?h:prev*.9+h*.1;m.h=nh;m.el.style.height=(nh*100)+'%';}
   advTick();requestAnimationFrame(meterLoop);}
 $('#startBtn').onclick=async()=>{const sb=$('#startBtn');sb.disabled=true;sb.textContent='Loading the band…';AC=mkAC();AC.resume();await loadWorklet();buildAudio();setP(A.vol.gain,(+$('#vol').value/100)**2*2);
   let ok=location.protocol!=='file:';
   if(ok){try{stemBufs.pw=await loadStems('pw',(d,n)=>{sb.textContent='Loading the band… '+d+'/'+n;});STEMS=true;}catch(e){ok=false;}}
-  if(!ok){STEMS=false;toast('Recordings not available here, so the band is synthesized.'+(location.protocol==='file:'?' Open the app online to hear the real recordings.':''),6000);}
-  $('#start').remove();startCrowd();startSeq();await AC.resume();if(STEMS&&seg==='pw')playStems('pw');else if(STEMS)useStems(seg);renderAll();meterLoop();};
+  if(!ok){STEMS=false;toast(location.protocol==='file:'?'This copy can’t load the recordings, so there’s no sound. Open the practice console from the app to hear them.':'Couldn’t load the recordings. Check the connection and reload.',8000);}
+  $('#start').remove();await AC.resume();if(STEMS&&seg==='pw')playStems('pw');else if(STEMS)useStems(seg);renderAll();meterLoop();};
 renderAll();
 ['input','click','change'].forEach(ev=>$('#selp').addEventListener(ev,()=>{if(sel&&sel.t==='in')touched=sel.id;},true));
 </script>
