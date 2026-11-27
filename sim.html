@@ -157,7 +157,7 @@
     <select id="iemSel" style="font-size:13px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:5px">
       <option value="3">Drums (Bus 3)</option><option value="4">Keys (Bus 4)</option><option value="5">Bass (Bus 5)</option>
     </select>
-    <div class="vol"><span class="sub">Vol</span><input type="range" id="vol" min="0" max="100" value="60"></div>
+    <div class="vol"><span class="sub">Vol</span><input type="range" id="vol" min="0" max="100" value="75"></div>
   </div>
 </header>
 
@@ -311,8 +311,11 @@ function buildAudio(){
   noiseBuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);
   const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
   // output chain
-  A.vol=g(.6);A.lim=AC.createDynamicsCompressor();A.lim.threshold.value=-6;A.lim.ratio.value=12;A.lim.attack.value=.003;A.lim.release.value=.15;
-  A.vol.connect(A.lim);A.lim.connect(AC.destination);
+  A.vol=g(.6);A.lim=AC.createDynamicsCompressor();A.lim.threshold.value=-4;A.lim.knee.value=0;A.lim.ratio.value=20;A.lim.attack.value=.001;A.lim.release.value=.12;
+  A.limMk=g(lin(-autoMakeupDb(-4,0,20)));
+  // soft clipper: clean up to -1 dBFS, rounds off anything above instead of hard clipping
+  A.clip=AC.createWaveShaper();{const n=4096,cu=new Float32Array(n),th=.89;for(let i=0;i<n;i++){const x=i/(n-1)*2-1,ax=Math.abs(x);cu[i]=Math.sign(x)*(ax<=th?ax:th+(1-th)*Math.tanh((ax-th)/(1-th)));}A.clip.curve=cu;A.clip.oversample='2x';}
+  A.vol.connect(A.lim);A.lim.connect(A.limMk);A.limMk.connect(A.clip);A.clip.connect(AC.destination);
   A.lis={};for(const k of['house','stream','wedge','iem','pfl']){A.lis[k]=g(0);A.lis[k].connect(A.vol);}
   // sources
   for(const k of['kick','snare','hat','tom1','tom2','tom3','tom4','tom5','bass','keysL','keysR','podium','headset','bgv1','bgv2','bgv3','bgv4','bgv5','lead','crowdA','crowdB','laptop','zoomL','zoomR'])SRC[k]=g(.3);
@@ -409,8 +412,15 @@ function compBlock(){const c={in:g(1),out:g(1),dry:g(0),wet:g(1),comp:AC.createD
 function setEq(b,pr){if(!pr||!pr.eq)return;pr.eq.forEach((e,i)=>{const f=b.bands[i];f.type=EQT[e.t]||'peaking';setP(f.frequency,e.f);
   if(f.type==='highpass'||f.type==='lowpass'){setP(f.Q,.707);setP(f.gain,0);}else if(f.type==='peaking'){setP(f.Q,e.q);setP(f.gain,e.g);}else{setP(f.Q,.707);setP(f.gain,e.g);} });
   setP(b.wet.gain,pr.eqOn?1:0);setP(b.dry.gain,pr.eqOn?0:1);}
+// Browsers' DynamicsCompressor adds hidden automatic make-up gain (Chromium/WebKit kernel). The X32 doesn't, so we cancel it.
+function autoMakeupDb(thr,knee,ratio){const l2d=x=>20*Math.log10(Math.max(x,1e-12)),d2l=x=>Math.pow(10,x/20);const lt=d2l(thr);
+  const kc=(x,k)=>x<lt?x:lt+(1-Math.exp(-k*(x-lt)))/k;
+  const sl=(x,k)=>{if(x<lt)return 1;const x2=x*1.001;return (l2d(kc(x2,k))-l2d(kc(x,k)))/(l2d(x2)-l2d(x));};
+  const kx=d2l(thr+knee);let mn=.1,mx=1e4,k=5;for(let i=0;i<15;i++){const s=sl(kx,k);if(s<1/ratio)mx=k;else mn=k;k=Math.sqrt(mn*mx);}
+  const kt=d2l(thr+knee),ykdb=l2d(kc(kt,k));const sat=x=>x<kt?kc(x,k):d2l(ykdb+(l2d(x)-(thr+knee))/ratio);
+  return 0.6*-l2d(sat(1));}
 function setComp(c,d){if(!d)return;const k=c.comp;setP(k.threshold,Math.max(-100,d.thr));setP(k.ratio,Math.min(20,Math.max(1,d.ratio)));setP(k.knee,Math.min(40,d.knee*6));
-  k.attack.setValueAtTime(Math.max(.001,d.att/1000),T());k.release.setValueAtTime(Math.min(1,Math.max(.01,d.rel/1000)),T());setP(c.mk.gain,lin(d.gain));
+  k.attack.setValueAtTime(Math.max(.001,d.att/1000),T());k.release.setValueAtTime(Math.min(1,Math.max(.01,d.rel/1000)),T());{const thr=Math.max(-100,d.thr),r=Math.min(20,Math.max(1,d.ratio)),kn=Math.min(40,d.knee*6);setP(c.mk.gain,lin(d.gain-autoMakeupDb(thr,kn,r)));}
   setP(c.wet.gain,d.on?1:0);setP(c.dry.gain,d.on?0:1);}
 // build input processing; returns output node
 function buildInProc(x,n){
@@ -882,14 +892,14 @@ function setSeg(s,quiet){seg=s;document.querySelectorAll('#segBtns button').forE
 document.querySelectorAll('#lisBtns button').forEach(b=>b.onclick=()=>setListen(b.dataset.l));
 document.querySelectorAll('#segBtns button').forEach(b=>b.onclick=()=>setSeg(b.dataset.seg));
 $('#iemSel').onchange=()=>{applyListen();if(listen!=='iem')setListen('iem');};
-$('#vol').oninput=()=>{if(A.vol)setP(A.vol.gain,(+$('#vol').value/100)**2*1.6);};
+$('#vol').oninput=()=>{if(A.vol)setP(A.vol.gain,(+$('#vol').value/100)**2);};
 $('#playBtn').onclick=async()=>{if(!AC)return;if(AC.state==='running'){await AC.suspend();$('#playBtn').textContent='▶ Play';}else{await AC.resume();$('#playBtn').textContent='⏸ Pause';}};
 // meters
 const buf=new Float32Array(512);
 function meterLoop(){for(const m of meters){const a=m.an();if(!a)continue;a.getFloatTimeDomainData(buf);let pk=0;for(let i=0;i<buf.length;i+=2){const v=Math.abs(buf[i]);if(v>pk)pk=v;}
   const db=pk>0?20*Math.log10(pk):-90;const h=Math.max(0,Math.min(1,(db+60)/60));const prev=m.h||0;const nh=h>prev?h:prev*.9+h*.1;m.h=nh;m.el.style.height=(nh*100)+'%';}
   advTick();requestAnimationFrame(meterLoop);}
-$('#startBtn').onclick=async()=>{$('#start').remove();AC=new (window.AudioContext||window.webkitAudioContext)();await loadWorklet();buildAudio();setP(A.vol.gain,(+$('#vol').value/100)**2*1.6);startCrowd();startSeq();await AC.resume();renderAll();meterLoop();};
+$('#startBtn').onclick=async()=>{$('#start').remove();AC=new (window.AudioContext||window.webkitAudioContext)();await loadWorklet();buildAudio();setP(A.vol.gain,(+$('#vol').value/100)**2);startCrowd();startSeq();await AC.resume();renderAll();meterLoop();};
 renderAll();
 </script>
 </body>
