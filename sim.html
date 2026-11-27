@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0f1115">
 <title>DPGA Practice Console</title>
+<link rel="icon" href="icon.svg">
 <style>
   :root{--bg:#0f1115;--panel:#181b22;--panel2:#20242d;--line:#2c313c;--text:#e8eaef;--muted:#9aa1ae;--accent:#e0a526;--red:#e5534b;--green:#4caf7a;--purple:#a77bf3;--blue:#4a90d9}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -60,7 +61,7 @@
   /* select panel */
   #selp .head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   #selp .head .scrib{width:auto;min-height:0;padding:3px 8px;font-size:13px}
-  .ctl{display:grid;grid-template-columns:90px 1fr 58px;gap:8px;align-items:center;margin:6px 0}
+  .ctl{display:grid;grid-template-columns:90px 1fr 66px;gap:8px;align-items:center;margin:6px 0}
   .ctl label{font-size:13px;color:var(--muted)}
   .ctl output{font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
   input[type=range]{width:100%;accent-color:var(--accent)}
@@ -95,6 +96,23 @@
   #start li{margin:4px 0}
   .lis button{font-size:13px;padding:6px 9px}
   .vol{display:flex;align-items:center;gap:6px;min-width:150px;flex:1}
+
+  #advBtn.on{background:var(--purple);border-color:var(--purple);color:#fff}
+  .tabs{display:flex;gap:4px;margin:2px 0 10px;flex-wrap:wrap}
+  .tabs button{font-size:13px;padding:6px 10px}
+  .tabs button.on{background:var(--purple);border-color:var(--purple);color:#fff}
+  canvas.eqc{width:100%;height:200px;background:#0c0e12;border:1px solid var(--line);border-radius:10px;touch-action:none;display:block}
+  .bands{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px;margin-top:8px}
+  .band{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:6px 8px;font-size:12px}
+  .band.act{border-color:var(--purple)}
+  .band .ctl{grid-template-columns:42px 1fr 52px;margin:3px 0}
+  .band select,.pr select{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;font-size:12px;padding:2px}
+  .grm{height:10px;background:#0b0c0f;border-radius:4px;position:relative;overflow:hidden;margin:4px 0}
+  .grm i{position:absolute;right:0;top:0;bottom:0;width:0;background:var(--accent)}
+  .lvm{height:10px;background:#0b0c0f;border-radius:4px;position:relative;overflow:hidden;margin:4px 0}
+  .lvm i{position:absolute;left:0;top:0;bottom:0;width:0;background:#3fae67}
+  .lvm b{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--red)}
+  .pr .row{margin:4px 0}
   @media (max-width:420px){.mf{height:130px}.scrib{font-size:9px}}
 </style>
 </head>
@@ -108,6 +126,7 @@
       <li><b>Listen</b> switches what you hear: the house, the stream, a wedge, an in-ear, or the selected channel (PFL).</li>
       <li>Tap <b>SEL</b> on any strip to see its sends and where its signal stops.</li>
       <li><b>Drills</b> break one thing for you to find and fix.</li>
+      <li><b>Stage 4</b> opens EQ, compressor and gate on every channel, with harder drills (including feedback).</li>
       <li>iPhone: turn the ringer switch on, or you'll hear nothing.</li>
     </ul>
     <p class="note">The band and voices are synthesized for now.</p>
@@ -124,6 +143,7 @@
       <button data-seg="video">Video</button>
     </div>
     <button id="playBtn">⏸ Pause</button>
+    <button id="advBtn" title="Stage 4">Stage 4: EQ &amp; dynamics</button>
   </div>
   <div class="row lis" style="margin-top:6px">
     <span class="sub" style="margin-right:2px">Listen:</span>
@@ -177,7 +197,7 @@
 
   <div class="card" id="selp"></div>
 
-  <p class="note">Simplified: no EQ, dynamics or full menus. For the real screens, Behringer's free X32-Edit runs offline with no desk attached. The scene's MTX 3–6 copies aren't simulated.</p>
+  <p class="note">Every channel runs the scene's own HPF, gate, EQ and compressor, even with Stage 4 off. Menus are simplified: for the real screens, Behringer's free X32-Edit runs offline with no desk attached. The scene's MTX 3–6 copies aren't simulated.</p>
 </main>
 
 <script>
@@ -287,7 +307,7 @@ function monoGain(v){const n=g(v);n.channelCount=1;n.channelCountMode='explicit'
 function an(){const a=AC.createAnalyser();a.fftSize=512;return a;}
 
 function buildAudio(){
-  AC=new (window.AudioContext||window.webkitAudioContext)();
+  if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();
   noiseBuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);
   const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
   // output chain
@@ -332,20 +352,88 @@ function buildAudio(){
   // inputs
   A.in={};A.pflBus=g(1);A.pflBus.connect(A.lis.pfl);
   for(const x of ST.inputs){const n={};
-    n.src=g(1);if(x.src&&SRC[x.src])SRC[x.src].connect(n.src);
+    n.src=g(lin(CAL[x.id]||0));if(x.src&&SRC[x.src])SRC[x.src].connect(n.src);
     n.gate=g(1);n.trim=g(1);n.meter=an();n.mute=monoGain(1);n.fad=monoGain(1);
     n.pan=AC.createStereoPanner();
-    n.src.connect(n.gate);n.gate.connect(n.trim);n.trim.connect(n.meter);n.trim.connect(n.mute);n.mute.connect(n.fad);n.fad.connect(n.pan);
+    n.src.connect(n.gate);n.gate.connect(n.trim);n.trim.connect(n.meter);(x.proc?buildInProc(x,n):n.trim).connect(n.mute);n.mute.connect(n.fad);n.fad.connect(n.pan);
     n.sends={};
     for(let b=1;b<=8;b++){const s=monoGain(0);n.sends[b]=s;s.connect(A.bus['b'+b].in);}
     n.grp={};for(const p of[9,11,13,15]){const s=stereoGain(0);n.grp[p]=s;n.pan.connect(s);s.connect(A.bus['b'+p].in);}
-    n.pfl=g(0);n.trim.connect(n.pfl);n.pfl.connect(A.pflBus);
+    n.pfl=g(0);(n.post||n.trim).connect(n.pfl);n.pfl.connect(A.pflBus);
     A.in[x.id]=n;wireSendTypes(x);}
+  if(A.in.c1&&A.in.c9&&A.in.c9.gw)A.in.c1.trim.connect(A.in.c9.gw,0,1);
+  for(const id of['b1','b2','b3','b4','b5','b6','b7','b8','b9','b11','b13','b15'])if(ST.buses[id].proc)buildBusProc(A.bus[id],ST.buses[id].proc);
+  A.main.in.disconnect();const me=eqBlock(),mc=compBlock();A.main.in.connect(me.in);me.out.connect(mc.in);mc.out.connect(A.main.mute);A.main.eqb=me;A.main.cmp=mc;
+  buildFeedback();
   applyAll();
 }
 function wireSendTypes(x){const n=A.in[x.id];if(!n)return;
   for(let b=1;b<=8;b++){const s=n.sends[b];try{n.mute.disconnect(s);}catch(e){}try{n.fad.disconnect(s);}catch(e){}
     const t=(x.sends[b]&&x.sends[b].type)||'POST';(t==='PRE'?n.mute:n.fad).connect(s);}}
+
+
+/* ================= processing: HPF, gate, EQ, compressor (Stage 4) ================= */
+const PROC={"c1":{"hpf":{"on":true,"f":34.0},"gate":{"on":true,"mode":"GATE","thr":-47.0,"range":40.0,"att":0.0,"hold":1.0,"rel":241.0,"key":0},"dyn":{"on":false,"thr":-21.5,"ratio":100.0,"knee":0.0,"gain":0.0,"att":27.0,"rel":95.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"VEQ","f":69.3,"g":2.0,"q":2.1},{"t":"PEQ","f":158.9,"g":-5.5,"q":2.9},{"t":"PEQ","f":363.9,"g":-3.5,"q":2.0},{"t":"PEQ","f":3550.0,"g":3.0,"q":2.0}]},"c2":{"hpf":{"on":true,"f":189.0},"gate":{"on":false,"mode":"GATE","thr":-63.0,"range":40.0,"att":0.0,"hold":0.02,"rel":361.0,"key":0},"dyn":{"on":true,"thr":-20.0,"ratio":4.0,"knee":2.0,"gain":2.0,"att":10.0,"rel":101.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"PEQ","f":202.3,"g":2.0,"q":1.5},{"t":"PEQ","f":432.5,"g":-4.0,"q":2.0},{"t":"PEQ","f":3550.0,"g":3.0,"q":1.5},{"t":"HShv","f":8140.0,"g":-2.0,"q":2.0}]},"c3":{"hpf":{"on":true,"f":400.0},"gate":{"on":true,"mode":"GATE","thr":-67.5,"range":36.0,"att":1.0,"hold":0.02,"rel":151.0,"key":0},"dyn":{"on":false,"thr":-35.5,"ratio":3.0,"knee":1.0,"gain":0.0,"att":11.0,"rel":151.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"LCut","f":2600.0,"g":0.25,"q":2.0},{"t":"PEQ","f":496.6,"g":0.0,"q":2.0},{"t":"PEQ","f":2990.0,"g":-4.75,"q":7.1},{"t":"HShv","f":10020.0,"g":1.5,"q":2.3}]},"c4":{"hpf":{"on":true,"f":136.0},"gate":{"on":true,"mode":"GATE","thr":-47.0,"range":33.0,"att":1.0,"hold":0.02,"rel":198.0,"key":0},"dyn":{"on":false,"thr":-23.5,"ratio":5.0,"knee":1.0,"gain":3.0,"att":40.0,"rel":101.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"PEQ","f":188.8,"g":0.25,"q":2.5},{"t":"PEQ","f":257.6,"g":0.25,"q":1.9},{"t":"PEQ","f":1350.0,"g":-7.75,"q":2.9},{"t":"PEQ","f":3940.0,"g":0.25,"q":2.0}]},"c5":{"hpf":{"on":true,"f":82.0},"gate":{"on":true,"mode":"GATE","thr":-42.5,"range":52.0,"att":1.0,"hold":0.02,"rel":108.0,"key":0},"dyn":{"on":false,"thr":-32.0,"ratio":5.0,"knee":1.0,"gain":5.0,"att":40.0,"rel":101.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"PEQ","f":158.9,"g":3.0,"q":1.5},{"t":"PEQ","f":447.7,"g":-3.0,"q":2.0},{"t":"PEQ","f":3940.0,"g":2.0,"q":2.0},{"t":"HShv","f":6180.0,"g":-2.5,"q":2.0}]},"c6":{"hpf":{"on":true,"f":70.0},"gate":{"on":true,"mode":"GATE","thr":-33.5,"range":60.0,"att":1.0,"hold":0.02,"rel":101.0,"key":0},"dyn":{"on":false,"thr":-23.5,"ratio":5.0,"knee":1.0,"gain":2.0,"att":40.0,"rel":101.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"PEQ","f":129.1,"g":3.0,"q":2.0},{"t":"PEQ","f":403.7,"g":-3.0,"q":1.9},{"t":"PEQ","f":3940.0,"g":2.0,"q":2.0},{"t":"HShv","f":6180.0,"g":-2.5,"q":2.0}]},"c7":{"hpf":{"on":true,"f":45.0},"gate":{"on":true,"mode":"GATE","thr":-33.5,"range":41.0,"att":1.0,"hold":0.02,"rel":101.0,"key":0},"dyn":{"on":false,"thr":-30.5,"ratio":4.0,"knee":1.0,"gain":2.0,"att":20.0,"rel":804.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"PEQ","f":232.3,"g":-2.5,"q":2.1},{"t":"PEQ","f":69.3,"g":3.0,"q":2.0},{"t":"PEQ","f":3550.0,"g":2.0,"q":2.0},{"t":"HShv","f":6180.0,"g":-4.0,"q":2.0}]},"c8":{"hpf":{"on":true,"f":45.0},"gate":{"on":true,"mode":"GATE","thr":-22.0,"range":60.0,"att":1.0,"hold":0.02,"rel":72.0,"key":0},"dyn":{"on":false,"thr":-38.0,"ratio":4.0,"knee":1.0,"gain":2.0,"att":20.0,"rel":804.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"PEQ","f":232.3,"g":-2.5,"q":2.1},{"t":"PEQ","f":69.3,"g":3.0,"q":2.0},{"t":"PEQ","f":3550.0,"g":2.0,"q":2.0},{"t":"HShv","f":6180.0,"g":-4.0,"q":2.0}]},"c9":{"hpf":{"on":false,"f":45.0},"gate":{"on":true,"mode":"DUCK","thr":-27.5,"range":9.0,"att":0.0,"hold":0.1,"rel":20.0,"key":1},"dyn":{"on":true,"thr":-35.5,"ratio":4.0,"knee":5.0,"gain":10.0,"att":5.0,"rel":40.0,"auto":true,"pos":"POST"},"eqOn":true,"eq":[{"t":"PEQ","f":47.4,"g":1.5,"q":2.4},{"t":"PEQ","f":120.5,"g":0.0,"q":6.1},{"t":"PEQ","f":116.4,"g":0.0,"q":2.8},{"t":"HCut","f":224.4,"g":-8.0,"q":2.0}]},"c10":{"hpf":{"on":true,"f":140.0},"gate":{"on":false,"mode":"GATE","thr":-62.0,"range":37.0,"att":5.0,"hold":502.0,"rel":983.0,"key":0},"dyn":{"on":true,"thr":-41.5,"ratio":4.0,"knee":5.0,"gain":10.0,"att":5.0,"rel":40.0,"auto":true,"pos":"POST"},"eqOn":true,"eq":[{"t":"PEQ","f":36.0,"g":0.25,"q":2.4},{"t":"PEQ","f":116.4,"g":0.0,"q":6.1},{"t":"PEQ","f":479.8,"g":1.0,"q":1.1},{"t":"HCut","f":4520.0,"g":-1.75,"q":2.0}]},"c11":{"hpf":{"on":false,"f":144.0},"gate":{"on":false,"mode":"GATE","thr":-69.5,"range":60.0,"att":1.0,"hold":502.0,"rel":983.0,"key":0},"dyn":{"on":true,"thr":-21.0,"ratio":3.0,"knee":1.0,"gain":0.0,"att":10.0,"rel":151.0,"auto":false,"pos":"POST"},"eqOn":false,"eq":[{"t":"LCut","f":403.7,"g":0.0,"q":2.0},{"t":"PEQ","f":496.6,"g":0.0,"q":2.0},{"t":"PEQ","f":2340.0,"g":2.0,"q":2.0},{"t":"HShv","f":10020.0,"g":2.75,"q":2.0}]},"c12":{"hpf":{"on":true,"f":207.0},"gate":{"on":false,"mode":"GATE","thr":-58.0,"range":60.0,"att":0.0,"hold":0.02,"rel":4000.0,"key":0},"dyn":{"on":true,"thr":-10.0,"ratio":100.0,"knee":0.0,"gain":0.0,"att":16.0,"rel":77.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"LShv","f":276.1,"g":-0.5,"q":0.9},{"t":"PEQ","f":496.6,"g":0.0,"q":2.0},{"t":"PEQ","f":1130.0,"g":1.0,"q":2.0},{"t":"HCut","f":1300.0,"g":3.5,"q":3.7}]},"c13":{"hpf":{"on":true,"f":107.0},"gate":{"on":false,"mode":"GATE","thr":-56.5,"range":60.0,"att":0.0,"hold":0.02,"rel":337.0,"key":0},"dyn":{"on":true,"thr":-10.0,"ratio":100.0,"knee":1.0,"gain":0.0,"att":16.0,"rel":77.0,"auto":true,"pos":"POST"},"eqOn":true,"eq":[{"t":"LShv","f":148.3,"g":0.0,"q":0.9},{"t":"PEQ","f":496.6,"g":0.0,"q":2.0},{"t":"PEQ","f":1130.0,"g":1.0,"q":2.0},{"t":"HCut","f":3090.0,"g":-13.2,"q":3.7}]},"c14":{"hpf":{"on":true,"f":40.0},"gate":{"on":false,"mode":"GATE","thr":-61.0,"range":60.0,"att":1.0,"hold":502.0,"rel":983.0,"key":0},"dyn":{"on":false,"thr":-41.5,"ratio":2.5,"knee":0.0,"gain":11.0,"att":24.0,"rel":30.0,"auto":false,"pos":"PRE"},"eqOn":true,"eq":[{"t":"PEQ","f":116.4,"g":0.25,"q":3.1},{"t":"PEQ","f":432.5,"g":-3.5,"q":2.9},{"t":"PEQ","f":232.3,"g":2.5,"q":3.1},{"t":"HShv","f":4220.0,"g":1.5,"q":4.8}]},"c15":{"hpf":{"on":true,"f":140.0},"gate":{"on":false,"mode":"GATE","thr":-80.0,"range":60.0,"att":1.0,"hold":502.0,"rel":983.0,"key":0},"dyn":{"on":true,"thr":-15.0,"ratio":2.0,"knee":3.0,"gain":0.0,"att":15.0,"rel":185.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"LShv","f":116.4,"g":0.0,"q":0.9},{"t":"PEQ","f":924.8,"g":0.25,"q":0.8},{"t":"PEQ","f":2690.0,"g":-4.75,"q":9.1},{"t":"PEQ","f":16250.0,"g":0.0,"q":1.3}]},"c16":{"hpf":{"on":true,"f":140.0},"gate":{"on":false,"mode":"GATE","thr":-80.0,"range":60.0,"att":1.0,"hold":502.0,"rel":983.0,"key":0},"dyn":{"on":true,"thr":-15.0,"ratio":2.0,"knee":3.0,"gain":0.0,"att":15.0,"rel":185.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"LShv","f":116.4,"g":0.0,"q":0.9},{"t":"PEQ","f":924.8,"g":0.25,"q":0.8},{"t":"PEQ","f":2690.0,"g":-4.75,"q":9.1},{"t":"PEQ","f":16250.0,"g":0.0,"q":1.3}]},"c17":{"hpf":{"on":true,"f":117.0},"gate":{"on":true,"mode":"GATE","thr":-53.5,"range":6.0,"att":0.0,"hold":0.02,"rel":15.0,"key":0},"dyn":{"on":true,"thr":-30.0,"ratio":7.0,"knee":5.0,"gain":6.0,"att":0.0,"rel":30.0,"auto":true,"pos":"POST"},"eqOn":true,"eq":[{"t":"VEQ","f":232.3,"g":-7.0,"q":4.3},{"t":"PEQ","f":417.9,"g":-3.75,"q":6.4},{"t":"VEQ","f":677.7,"g":-0.5,"q":2.6},{"t":"PEQ","f":1550.0,"g":-3.25,"q":6.1}]},"c18":{"hpf":{"on":true,"f":173.0},"gate":{"on":true,"mode":"GATE","thr":-27.0,"range":6.0,"att":0.0,"hold":0.02,"rel":30.0,"key":0},"dyn":{"on":true,"thr":-28.0,"ratio":4.0,"knee":5.0,"gain":5.0,"att":27.0,"rel":108.0,"auto":true,"pos":"POST"},"eqOn":true,"eq":[{"t":"LShv","f":209.4,"g":-0.5,"q":1.2},{"t":"PEQ","f":417.9,"g":-3.5,"q":1.0},{"t":"PEQ","f":4850.0,"g":-3.0,"q":3.9},{"t":"HShv","f":8730.0,"g":1.75,"q":0.3}]},"c19":{"hpf":{"on":true,"f":201.0},"gate":{"on":true,"mode":"GATE","thr":-52.5,"range":6.0,"att":9.0,"hold":0.02,"rel":576.0,"key":0},"dyn":{"on":true,"thr":-15.0,"ratio":3.0,"knee":5.0,"gain":0.0,"att":12.0,"rel":40.0,"auto":true,"pos":"PRE"},"eqOn":true,"eq":[{"t":"VEQ","f":164.4,"g":-0.25,"q":4.8},{"t":"PEQ","f":590.2,"g":-3.0,"q":3.5},{"t":"PEQ","f":3550.0,"g":0.0,"q":2.5},{"t":"HShv","f":8140.0,"g":-3.0,"q":4.3}]},"c20":{"hpf":{"on":true,"f":110.0},"gate":{"on":true,"mode":"GATE","thr":-50.0,"range":6.0,"att":0.0,"hold":0.02,"rel":52.0,"key":0},"dyn":{"on":true,"thr":-16.0,"ratio":3.0,"knee":5.0,"gain":0.0,"att":12.0,"rel":40.0,"auto":true,"pos":"POST"},"eqOn":true,"eq":[{"t":"VEQ","f":232.3,"g":-3.5,"q":4.8},{"t":"PEQ","f":363.9,"g":-5.75,"q":4.1},{"t":"PEQ","f":1910.0,"g":0.0,"q":1.0},{"t":"HShv","f":7090.0,"g":1.0,"q":6.7}]},"c21":{"hpf":{"on":true,"f":240.0},"gate":{"on":true,"mode":"GATE","thr":-60.5,"range":6.0,"att":10.0,"hold":3.17,"rel":983.0,"key":0},"dyn":{"on":true,"thr":-18.0,"ratio":3.0,"knee":5.0,"gain":0.0,"att":10.0,"rel":116.0,"auto":true,"pos":"POST"},"eqOn":true,"eq":[{"t":"PEQ","f":133.7,"g":0.0,"q":4.3},{"t":"PEQ","f":833.7,"g":0.0,"q":0.7},{"t":"PEQ","f":1720.0,"g":-0.25,"q":2.1},{"t":"HShv","f":8730.0,"g":1.0,"q":2.8}]},"c22":{"hpf":{"on":true,"f":288.0},"gate":{"on":true,"mode":"GATE","thr":-56.5,"range":6.0,"att":32.0,"hold":0.02,"rel":983.0,"key":0},"dyn":{"on":true,"thr":-22.5,"ratio":3.0,"knee":5.0,"gain":0.0,"att":50.0,"rel":162.0,"auto":true,"pos":"POST"},"eqOn":true,"eq":[{"t":"PEQ","f":124.7,"g":0.0,"q":2.0},{"t":"PEQ","f":306.2,"g":0.25,"q":3.9},{"t":"PEQ","f":2690.0,"g":0.25,"q":2.0},{"t":"HShv","f":8730.0,"g":1.0,"q":2.0}]},"c23":{"hpf":{"on":true,"f":184.0},"gate":{"on":true,"mode":"GATE","thr":-62.0,"range":5.0,"att":1.0,"hold":0.02,"rel":49.0,"key":0},"dyn":{"on":true,"thr":-16.0,"ratio":3.0,"knee":5.0,"gain":0.0,"att":30.0,"rel":151.0,"auto":true,"pos":"PRE"},"eqOn":true,"eq":[{"t":"PEQ","f":285.8,"g":-4.0,"q":6.4},{"t":"PEQ","f":514.1,"g":-4.0,"q":4.5},{"t":"PEQ","f":1970.0,"g":-2.5,"q":6.7},{"t":"PEQ","f":3090.0,"g":2.0,"q":1.1}]},"c24":{"hpf":{"on":true,"f":132.0},"gate":{"on":true,"mode":"GATE","thr":-40.5,"range":5.0,"att":1.0,"hold":0.02,"rel":185.0,"key":0},"dyn":{"on":true,"thr":-16.0,"ratio":3.0,"knee":5.0,"gain":0.0,"att":10.0,"rel":151.0,"auto":true,"pos":"POST"},"eqOn":true,"eq":[{"t":"PEQ","f":376.7,"g":-0.25,"q":1.4},{"t":"VEQ","f":1170.0,"g":0.0,"q":2.1},{"t":"PEQ","f":2110.0,"g":0.0,"q":1.5},{"t":"HShv","f":6180.0,"g":0.5,"q":2.3}]},"c25":{"hpf":{"on":true,"f":201.0},"gate":{"on":true,"mode":"EXP3","thr":-50.0,"range":8.0,"att":1.0,"hold":0.02,"rel":185.0,"key":0},"dyn":{"on":true,"thr":-18.0,"ratio":2.5,"knee":5.0,"gain":0.0,"att":10.0,"rel":151.0,"auto":true,"pos":"POST"},"eqOn":true,"eq":[{"t":"PEQ","f":351.6,"g":-4.75,"q":3.9},{"t":"VEQ","f":1550.0,"g":-6.0,"q":10.0},{"t":"PEQ","f":9350.0,"g":-5.5,"q":1.9},{"t":"PEQ","f":726.2,"g":-4.0,"q":6.4}]},"c26":{"hpf":{"on":true,"f":173.0},"gate":{"on":true,"mode":"GATE","thr":-51.5,"range":21.0,"att":0.0,"hold":0.02,"rel":1677.0,"key":0},"dyn":{"on":true,"thr":-50.5,"ratio":20.0,"knee":0.0,"gain":6.0,"att":0.0,"rel":1917.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"PEQ","f":124.7,"g":0.0,"q":2.0},{"t":"PEQ","f":496.6,"g":0.0,"q":2.0},{"t":"PEQ","f":1970.0,"g":0.0,"q":2.0},{"t":"HCut","f":4850.0,"g":0.0,"q":2.0}]},"c27":{"hpf":{"on":true,"f":263.0},"gate":{"on":true,"mode":"GATE","thr":-50.0,"range":9.0,"att":13.0,"hold":0.02,"rel":1373.0,"key":0},"dyn":{"on":true,"thr":-50.0,"ratio":20.0,"knee":0.0,"gain":6.0,"att":0.0,"rel":1917.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"PEQ","f":276.1,"g":-0.75,"q":2.0},{"t":"PEQ","f":590.2,"g":0.25,"q":2.0},{"t":"PEQ","f":1970.0,"g":0.0,"q":2.0},{"t":"HCut","f":3200.0,"g":-6.0,"q":2.0}]},"c28":{"hpf":{"on":true,"f":263.0},"gate":{"on":true,"mode":"GATE","thr":-50.0,"range":9.0,"att":13.0,"hold":0.02,"rel":1373.0,"key":0},"dyn":{"on":true,"thr":-50.0,"ratio":20.0,"knee":0.0,"gain":6.0,"att":0.0,"rel":1917.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"PEQ","f":276.1,"g":-0.75,"q":2.0},{"t":"PEQ","f":590.2,"g":0.25,"q":2.0},{"t":"PEQ","f":1970.0,"g":0.0,"q":2.0},{"t":"HCut","f":3200.0,"g":-6.0,"q":2.0}]},"b1":{"dyn":{"on":false,"thr":-14.5,"ratio":100.0,"knee":0.0,"gain":0.0,"att":10.0,"rel":101.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"LCut","f":164.4,"g":-3.5,"q":1.8},{"t":"PEQ","f":339.6,"g":-2.75,"q":2.4},{"t":"PEQ","f":1840.0,"g":-3.75,"q":5.5},{"t":"PEQ","f":1020.0,"g":-3.0,"q":3.7}]},"b2":{"dyn":{"on":false,"thr":-50.5,"ratio":20.0,"knee":0.0,"gain":6.0,"att":0.0,"rel":1917.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"LCut","f":138.4,"g":-0.5,"q":2.0},{"t":"PEQ","f":158.9,"g":0.0,"q":2.0},{"t":"PEQ","f":496.6,"g":0.0,"q":2.0},{"t":"PEQ","f":1970.0,"g":0.0,"q":2.0}]},"b3":{"dyn":{"on":true,"thr":-10.0,"ratio":100.0,"knee":0.0,"gain":5.0,"att":10.0,"rel":151.0,"auto":true,"pos":"POST"},"eqOn":true,"eq":[{"t":"LShv","f":79.6,"g":0.0,"q":2.0},{"t":"PEQ","f":158.9,"g":0.0,"q":2.0},{"t":"PEQ","f":496.6,"g":0.0,"q":2.0},{"t":"PEQ","f":1970.0,"g":0.0,"q":2.0}]},"b4":{"dyn":{"on":true,"thr":-10.0,"ratio":100.0,"knee":0.0,"gain":4.0,"att":15.0,"rel":25.0,"auto":true,"pos":"POST"},"eqOn":true,"eq":[{"t":"LCut","f":20.0,"g":-13.5,"q":2.0},{"t":"PEQ","f":112.5,"g":0.0,"q":1.0},{"t":"PEQ","f":924.8,"g":0.0,"q":1.0},{"t":"PEQ","f":514.1,"g":0.0,"q":0.6}]},"b5":{"dyn":{"on":true,"thr":-10.0,"ratio":100.0,"knee":0.0,"gain":5.0,"att":10.0,"rel":151.0,"auto":true,"pos":"POST"},"eqOn":true,"eq":[{"t":"LCut","f":71.8,"g":0.25,"q":2.0},{"t":"PEQ","f":112.5,"g":-10.5,"q":3.9},{"t":"PEQ","f":432.5,"g":-1.25,"q":2.0},{"t":"PEQ","f":1210.0,"g":-3.5,"q":2.0}]},"b6":{"dyn":{"on":true,"thr":-22.5,"ratio":100.0,"knee":1.0,"gain":6.0,"att":10.0,"rel":151.0,"auto":true,"pos":"POST"},"eqOn":true,"eq":[{"t":"LCut","f":71.8,"g":-7.0,"q":6.1},{"t":"LShv","f":112.5,"g":-0.5,"q":2.0},{"t":"PEQ","f":195.4,"g":-0.5,"q":3.4},{"t":"PEQ","f":447.7,"g":-2.5,"q":10.0}]},"b7":{"dyn":{"on":true,"thr":-45.0,"ratio":7.0,"knee":0.0,"gain":0.0,"att":0.0,"rel":63.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"LCut","f":285.8,"g":-0.25,"q":2.0},{"t":"PEQ","f":82.4,"g":0.0,"q":4.1},{"t":"PEQ","f":654.7,"g":0.25,"q":2.0},{"t":"PEQ","f":1970.0,"g":0.0,"q":2.0}]},"b8":{"dyn":{"on":true,"thr":-16.5,"ratio":100.0,"knee":0.0,"gain":0.0,"att":66.0,"rel":241.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"LShv","f":79.6,"g":0.0,"q":2.0},{"t":"PEQ","f":158.9,"g":0.0,"q":2.0},{"t":"PEQ","f":496.6,"g":0.0,"q":2.0},{"t":"PEQ","f":1970.0,"g":0.0,"q":2.0}]},"b9":{"dyn":{"on":false,"thr":-24.0,"ratio":5.0,"knee":0.0,"gain":0.0,"att":30.0,"rel":3499.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"LShv","f":52.6,"g":2.0,"q":2.0},{"t":"PEQ","f":153.5,"g":-3.25,"q":2.5},{"t":"PEQ","f":1550.0,"g":-1.5,"q":1.8},{"t":"PEQ","f":550.8,"g":-2.25,"q":1.5}]},"b11":{"dyn":{"on":true,"thr":-3.0,"ratio":100.0,"knee":0.0,"gain":0.0,"att":17.0,"rel":40.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"LCut","f":34.8,"g":1.25,"q":2.0},{"t":"PEQ","f":195.4,"g":-3.5,"q":4.5},{"t":"PEQ","f":74.3,"g":0.0,"q":0.6},{"t":"PEQ","f":2110.0,"g":-3.0,"q":0.8}]},"b13":{"dyn":{"on":true,"thr":-12.0,"ratio":3.0,"knee":5.0,"gain":5.0,"att":10.0,"rel":116.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"LCut","f":120.5,"g":0.25,"q":2.0},{"t":"PEQ","f":328.1,"g":0.0,"q":2.0},{"t":"PEQ","f":514.1,"g":-3.0,"q":2.0},{"t":"PEQ","f":2110.0,"g":2.5,"q":0.8}]},"b15":{"dyn":{"on":true,"thr":-40.0,"ratio":20.0,"knee":0.0,"gain":15.0,"att":0.0,"rel":151.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"LCut","f":39.9,"g":4.75,"q":2.0},{"t":"PEQ","f":158.9,"g":-2.5,"q":2.5},{"t":"PEQ","f":514.1,"g":-3.0,"q":2.1},{"t":"PEQ","f":1350.0,"g":0.0,"q":2.2}]},"main":{"dyn":{"on":true,"thr":-3.0,"ratio":100.0,"knee":0.0,"gain":0.0,"att":1.0,"rel":30.0,"auto":false,"pos":"POST"},"eqOn":true,"eq":[{"t":"LCut","f":39.9,"g":-15.0,"q":6.4},{"t":"PEQ","f":98.0,"g":0.0,"q":6.7},{"t":"PEQ","f":182.4,"g":-3.0,"q":1.0},{"t":"PEQ","f":1490.0,"g":0.75,"q":0.8}]}};
+for(const x of SCENE.inputs)if(PROC[x.id])x.proc=JSON.parse(JSON.stringify(PROC[x.id]));
+for(const id in SCENE.buses)if(PROC[id])SCENE.buses[id].proc=JSON.parse(JSON.stringify(PROC[id]));
+SCENE.main.proc=JSON.parse(JSON.stringify(PROC.main));
+ST=serviceState();indexState();
+// dynamics position: PRE = compressor before EQ (from the scene)
+const GATE_SRC=`class G extends AudioWorkletProcessor{constructor(){super();this.p={on:false,mode:'GATE',thr:-60,range:60,att:1,hold:20,rel:100};this.env=0;this.g=1;this.hc=0;this.mn=1;this.n=0;this.port.onmessage=e=>Object.assign(this.p,e.data);}
+process(inp,out){const y=out[0]&&out[0][0];if(!y)return true;const x=inp[0]&&inp[0][0];if(!x){y.fill(0);return true;}const k=(this.p.key&&inp[1]&&inp[1][0])?inp[1][0]:x;const p=this.p,sr=sampleRate;
+if(!p.on){y.set(x);this.g=1;this.post(1,x.length);return true;}
+const thr=Math.pow(10,p.thr/20),fl=Math.pow(10,-p.range/20),aC=Math.exp(-1/(sr*Math.max(p.att,.05)/1000)),rC=Math.exp(-1/(sr*Math.max(p.rel,5)/1000)),dC=Math.exp(-1/(sr*.008)),hS=p.hold*sr/1000;
+for(let i=0;i<x.length;i++){const a=Math.abs(k[i]);this.env=a>this.env?a:this.env*dC;const open=this.env>thr;let tgt;
+ if(p.mode==='DUCK'){tgt=open?fl:1;}else{if(open)this.hc=hS;else if(this.hc>0)this.hc--;tgt=(open||this.hc>0)?1:fl;}
+ this.g=tgt>this.g?tgt+(this.g-tgt)*aC:tgt+(this.g-tgt)*rC;if(p.mode==='DUCK'&&tgt<this.g)this.g=tgt+(this.g-tgt)*aC;y[i]=x[i]*this.g;if(this.g<this.mn)this.mn=this.g;}
+this.post(null,x.length);return true;}
+post(v,len){this.n+=len;if(this.n>=2048){this.port.postMessage(20*Math.log10(Math.max(v||this.mn,1e-5)));this.n=0;this.mn=1;}}}
+registerProcessor('dpga-gate',G);`;
+let WORKLET=false;
+async function loadWorklet(){try{const u=URL.createObjectURL(new Blob([GATE_SRC],{type:'application/javascript'}));await AC.audioWorklet.addModule(u);WORKLET=true;}catch(e){WORKLET=false;}}
+const EQT={LCut:'highpass',HCut:'lowpass',LShv:'lowshelf',HShv:'highshelf',PEQ:'peaking',VEQ:'peaking'};
+function eqBlock(){const b={in:g(1),out:g(1),dry:g(0),wet:g(1),bands:[]};let last=b.in;
+  for(let i=0;i<4;i++){const f=AC.createBiquadFilter();last.connect(f);last=f;b.bands.push(f);}last.connect(b.wet);b.wet.connect(b.out);b.in.connect(b.dry);b.dry.connect(b.out);return b;}
+function compBlock(){const c={in:g(1),out:g(1),dry:g(0),wet:g(1),comp:AC.createDynamicsCompressor(),mk:g(1)};c.in.connect(c.comp);c.comp.connect(c.mk);c.mk.connect(c.wet);c.wet.connect(c.out);c.in.connect(c.dry);c.dry.connect(c.out);return c;}
+function setEq(b,pr){if(!pr||!pr.eq)return;pr.eq.forEach((e,i)=>{const f=b.bands[i];f.type=EQT[e.t]||'peaking';setP(f.frequency,e.f);
+  if(f.type==='highpass'||f.type==='lowpass'){setP(f.Q,.707);setP(f.gain,0);}else if(f.type==='peaking'){setP(f.Q,e.q);setP(f.gain,e.g);}else{setP(f.Q,.707);setP(f.gain,e.g);} });
+  setP(b.wet.gain,pr.eqOn?1:0);setP(b.dry.gain,pr.eqOn?0:1);}
+function setComp(c,d){if(!d)return;const k=c.comp;setP(k.threshold,Math.max(-100,d.thr));setP(k.ratio,Math.min(20,Math.max(1,d.ratio)));setP(k.knee,Math.min(40,d.knee*6));
+  k.attack.setValueAtTime(Math.max(.001,d.att/1000),T());k.release.setValueAtTime(Math.min(1,Math.max(.01,d.rel/1000)),T());setP(c.mk.gain,lin(d.gain));
+  setP(c.wet.gain,d.on?1:0);setP(c.dry.gain,d.on?0:1);}
+// build input processing; returns output node
+function buildInProc(x,n){
+  n.h1=AC.createBiquadFilter();n.h2=AC.createBiquadFilter();n.h1.type=n.h2.type='highpass';n.hdry=g(0);n.hwet=g(1);n.hout=g(1);
+  n.trim.connect(n.h1);n.h1.connect(n.h2);n.h2.connect(n.hwet);n.hwet.connect(n.hout);n.trim.connect(n.hdry);n.hdry.connect(n.hout);
+  let after=n.hout;
+  if(WORKLET){n.gw=new AudioWorkletNode(AC,'dpga-gate',{numberOfInputs:2,numberOfOutputs:1,outputChannelCount:[1]});n.hout.connect(n.gw,0,0);n.gw.port.onmessage=e=>{n.gr=e.data;};after=n.gw;}
+  n.eqb=eqBlock();n.cmp=compBlock();n.procIn=after;n.post=g(1);wireOrder(x,n);return n.post;}
+function wireOrder(x,n){if(!n.eqb)return;try{n.procIn.disconnect();}catch(e){}try{n.eqb.out.disconnect();}catch(e){}try{n.cmp.out.disconnect();}catch(e){}
+  if(n.gw&&n.procIn===n.gw){}/* gate output re-attached below */
+  const pre=x.proc&&x.proc.dyn&&x.proc.dyn.pos==='PRE';
+  if(pre){n.procIn.connect(n.cmp.in);n.cmp.out.connect(n.eqb.in);n.eqb.out.connect(n.post);}else{n.procIn.connect(n.eqb.in);n.eqb.out.connect(n.cmp.in);n.cmp.out.connect(n.post);}
+  if(n.rtaTap)n.post.connect(n.rtaTap);}
+function applyInProc(x){const n=A.in&&A.in[x.id];if(!n||!n.eqb||!x.proc)return;const p=x.proc;
+  if(p.hpf){setP(n.h1.frequency,p.hpf.f);setP(n.h2.frequency,p.hpf.f);setP(n.hwet.gain,p.hpf.on?1:0);setP(n.hdry.gain,p.hpf.on?0:1);}
+  if(n.gw&&p.gate)n.gw.port.postMessage(Object.assign({},p.gate,{key:!!p.gate.key}));
+  setEq(n.eqb,p);setComp(n.cmp,p.dyn);}
+function buildBusProc(node,pr){const e=eqBlock(),c=compBlock();node.in.disconnect();node.in.connect(e.in);e.out.connect(c.in);c.out.connect(node.mute);node.eqb=e;node.cmp=c;
+  for(const f of e.bands){f.channelCountMode='max';}return node;}
+function applyBusProc(node,pr){if(!node||!node.eqb||!pr)return;setEq(node.eqb,pr);setComp(node.cmp,pr.dyn);}
+// feedback loop: the wedge (S16 out 1) leaks back into the lead mic through the room
+// source level calibration so each input hits the scene's gate/comp thresholds the way real mics would
+const CAL={"c1": 2.6, "c2": 2.8, "c3": -0.7, "c5": 3.4, "c6": 3.4, "c7": 3.4, "c8": 3.4, "c9": -14.3, "c10": -22.5, "c15": 7.3, "c16": 6.0, "c17": -8.7, "c18": -8.3, "c19": 13.7, "c20": 12.9, "c21": 11.4, "c22": 8.5, "c23": 5.3, "c24": 12.4};
+const FB={f:2500,coupleDb:-17};
+function buildFeedback(){const r=AC.createDelay(.1);r.delayTime.value=.011;const pk=AC.createBiquadFilter();pk.type='peaking';pk.frequency.value=FB.f;pk.Q.value=9;pk.gain.value=15;
+  const bp=AC.createBiquadFilter();bp.type='bandpass';bp.frequency.value=FB.f;bp.Q.value=1.2;
+  const lim=AC.createDynamicsCompressor();lim.threshold.value=-26;lim.ratio.value=20;lim.attack.value=.001;lim.release.value=.08;
+  A.fbGain=g(lin(FB.coupleDb));A.s16.b1.connect(r);r.connect(pk);pk.connect(bp);bp.connect(A.fbGain);A.fbGain.connect(lim);lim.connect(A.in.c23.gate);A.fbPeak=pk;A.fbBp=bp;}
+// loop gain estimate at the ring frequency (dB), used to check the feedback drill
+function respDb(node,f){const fr=new Float32Array([f]),m=new Float32Array(1),ph=new Float32Array(1);node.getFrequencyResponse(fr,m,ph);return 20*Math.log10(Math.max(m[0],1e-6));}
+function eqDbAt(b,on,f){if(!on)return 0;return b.bands.reduce((a,fl)=>a+respDb(fl,f),0);}
+function loopGainDb(){if(!A.in)return -99;const x=IN.c23,n=A.in.c23,b=ST.buses.b1,s=x.sends[1];if(!s||!s.on||inMuted(x)||busMuted(b)||!ST.aes||!gateOpen(x))return -99;
+  let d=x.trim+(x.proc.hpf.on?respDb(n.h1,FB.f)+respDb(n.h2,FB.f):0)+eqDbAt(n.eqb,x.proc.eqOn,FB.f)+(x.proc.dyn.on?x.proc.dyn.gain:0)+s.lvl+(s.type==='POST'?inGainDb(x):0)+busGainDb(b)+eqDbAt(A.bus.b1.eqb,b.proc.eqOn,FB.f)+FB.coupleDb+respDb(A.fbPeak,FB.f)+respDb(A.fbBp,FB.f);
+  return d;}
 
 /* ================= effective values ================= */
 const mgOn=list=>list.some(k=>ST.mg[k-1]);
@@ -361,17 +449,17 @@ function busGainDb(b){return b.fader<=-89?-200:b.fader+dcaDb(b.dca);}
 const T=()=>AC.currentTime;
 function setP(p,v){p.setTargetAtTime(v,T(),.012);}
 
-function applyIn(x){const n=A.in&&A.in[x.id];if(!n)return;
+function applyIn(x){const n=A.in&&A.in[x.id];if(!n)return;applyInProc(x);
   setP(n.gate.gain,gateOpen(x)?1:0);setP(n.trim.gain,lin(x.trim));
   setP(n.mute.gain,inMuted(x)?0:1);setP(n.fad.gain,lin(inGainDb(x)));
   setP(n.pan.pan,Math.max(-1,Math.min(1,x.pan/100)));
   for(let b=1;b<=8;b++){const s=x.sends[b];setP(n.sends[b].gain,s&&s.on?lin(s.lvl):0);}
   for(const p of[9,11,13,15])setP(n.grp[p].gain,x.grp[p]?1:0);}
-function applyBus(id){const b=ST.buses[id],n=A.bus&&A.bus[id];if(!n)return;
+function applyBus(id){const b=ST.buses[id],n=A.bus&&A.bus[id];if(!n)return;applyBusProc(n,b.proc);
   setP(n.mute.gain,busMuted(b)?0:1);setP(n.fad.gain,lin(busGainDb(b)));
   if(n.lr)setP(n.lr.gain,b.lr?1:0);if(n.mx)setP(n.mx.gain,b.mtx!=null?lin(b.mtx):0);
   if(A.s16[id])setP(A.s16[id].gain,ST.aes?1:0);}
-function applyMain(){if(!A.main)return;const m=ST.main;setP(A.main.mute.gain,m.on?1:0);setP(A.main.fad.gain,lin(m.fader));setP(A.aesHouse.gain,ST.aes?1:0);
+function applyMain(){if(!A.main)return;applyBusProc(A.main,ST.main.proc);const m=ST.main;setP(A.main.mute.gain,m.on?1:0);setP(A.main.fad.gain,lin(m.fader));setP(A.aesHouse.gain,ST.aes?1:0);
   const x=ST.mtx.m1;setP(A.mtx.mute.gain,x.on?1:0);setP(A.mtx.fad.gain,lin(x.fader));}
 function applyAll(){if(!AC)return;for(const x of ST.inputs){wireSendTypes(x);applyIn(x);}for(const id in ST.buses)applyBus(id);applyMain();applyListen();}
 
@@ -528,7 +616,7 @@ function buildPaths(x){const P=[['Input (before the fader)',inputChain(x)],['→
 function srcActive(k){if(seg==='pw')return!['podium','headset','laptop','zoomL','zoomR'].includes(k);if(seg==='speak')return['podium','headset','crowdA','crowdB'].includes(k);if(seg==='video')return['laptop','crowdA','crowdB'].includes(k);return false;}
 
 /* ================= select panel ================= */
-function renderSel(){const p=$('#selp');p.innerHTML='';if(!sel)return;
+function renderSelBase(p){if(!sel)return;
   if(sel.t==='in')return renderSelIn(p,IN[sel.id]);
   if(sel.t==='bus')return renderSelBus(p,sel.id);
   if(sel.t==='dca')return renderSelDca(p,sel.id);
@@ -591,48 +679,179 @@ $('#sceneBtn').onclick=()=>{const keep={routing:ST.routing,aes:ST.aes};const cab
 /* ================= drills ================= */
 const DRILLS=[
  {id:'play',sym:'Every mic and instrument went silent at once: house, stream and wedges. The meters on channels 1–32 are flat.',hint:'Something that affects all 32 channels at once but not the aux inputs. Check Setup.',
-  apply:s=>{s.routing='PLAY';},fixed:s=>s.routing==='REC',ans:'Routing was set to PLAY. In PLAY the 32 channels listen to the card, so they go silent; aux inputs still work. Setup › turn to REC › push to confirm.',card:'Mics and instruments silent'},
+  apply:s=>{s.routing='PLAY';},fixed:s=>s.routing==='REC',ans:'Routing was set to PLAY. In PLAY the 32 channels listen to the card, so they go silent; aux inputs still work. Setup › turn to REC › push to confirm.',card:'Mics and instruments silent, but the laptop and aux inputs still work'},
  {id:'dca5',sym:'The backing vocals have vanished from the house and the stream. The singers say they can still hear themselves in the wedge.',hint:'Wedge sends are pre-fader. What else turns the BGVs down without touching their sends?',
-  apply:s=>{s.dca[5].fader=-90;},fixed:s=>s.dca[5].fader>-20,ans:'DCA 5 (BGVs) was pulled all the way down. The wedges are pre-fader, so they kept working.',card:'Vocals too loud or buried'},
+  apply:s=>{s.dca[5].fader=-90;},fixed:s=>s.dca[5].fader>-20,ans:'DCA 5 (BGVs) was pulled all the way down. The wedges are pre-fader, so they kept working.',card:'One mic has no sound, but its meter is moving'},
  {id:'bus13',sym:'No vocals at all in the house or the stream. The singers hear themselves fine. The band sounds normal.',hint:'All the vocals share one path to the house and stream. Look at Bus 9–16.',
-  apply:s=>{s.buses.b13.on=false;},fixed:s=>s.buses.b13.on,ans:'Bus 13/14 (Vox subgroup) was muted. Every vocal reaches the house and stream through it.',card:'No sound from the house speakers'},
+  apply:s=>{s.buses.b13.on=false;},fixed:s=>s.buses.b13.on,ans:'Bus 13/14 (Vox subgroup) was muted. Every vocal reaches the house and stream through it.',card:'Nothing coming out of the house speakers'},
  {id:'aes',sym:'Every vocal mic, every wedge and the house speakers went dead. The stream still has drums, bass and keys.',hint:'What carries the stage mics, the monitor outputs and the PA feed?',
   apply:s=>{s.aes=false;},fixed:s=>s.aes,ans:'The AES50 B link to the S16 dropped. It carries the stage mics, the monitors (S16 out 1–6) and the PA (S16 out 7/8). Reseat the cable between songs.',card:'Nothing coming out of the house speakers'},
  {id:'post',sym:'The lead singer says her wedge disappears whenever you pull her fader down.',hint:'Select the lead and look at her Bus 1 send.',
-  apply:s=>{s.inputs.find(x=>x.id==='c23').sends[1].type='POST';},fixed:s=>s.inputs.find(x=>x.id==='c23').sends[1].type==='PRE',ans:'Her Bus 1 send was switched to post-fader, so it followed her house fader. Monitor sends should be PRE.',card:'Singers can’t hear themselves'},
+  apply:s=>{s.inputs.find(x=>x.id==='c23').sends[1].type='POST';},fixed:s=>s.inputs.find(x=>x.id==='c23').sends[1].type==='PRE',ans:'Her Bus 1 send was switched to post-fader, so it followed her house fader. Monitor sends should be PRE.',card:'Singers can\'t hear themselves'},
  {id:'fx',sym:'The vocals sound dry: the delay effect is gone from the house and stream.',hint:'Find where FX 4 comes back into the desk.',
-  apply:s=>{s.mg[5]=true;},fixed:s=>!s.mg[5]&&s.inputs.find(x=>x.id==='f7').on&&s.dca[7].on,ans:'Mute group 6 was on, muting the FX 4 returns (7/8). The returns feed Bus 13/14.',card:'No vocal delay'},
+  apply:s=>{s.mg[5]=true;},fixed:s=>!s.mg[5]&&s.inputs.find(x=>x.id==='f7').on&&s.dca[7].on,ans:'Mute group 6 was on, muting the FX 4 returns (7/8). The returns feed Bus 13/14.',card:'No vocal delay, or the delay sounds wrong'},
  {id:'keys',sym:'On the stream the keys only come from the left side. One keys meter barely moves.',hint:'Compare the meters on 15 and 16, then check that channel’s cable.',
-  apply:s=>{s.inputs.find(x=>x.id==='c16').cable=false;},fixed:s=>s.inputs.find(x=>x.id==='c16').cable,ans:'Keys R (ch 16) had a loose cable at the DI. One side of a stereo pair dead points to the cable or DI on that side.',card:'Stream sounds lopsided'},
+  apply:s=>{s.inputs.find(x=>x.id==='c16').cable=false;},fixed:s=>s.inputs.find(x=>x.id==='c16').cable,ans:'Keys R (ch 16) had a loose cable at the DI. One side of a stereo pair dead points to the cable or DI on that side.',card:'Stream sounds lopsided, or something only on one side'},
  {id:'pan',sym:'An online viewer says one backing singer sounds stuck in one ear.',hint:'Only the stream is stereo. Check the BGV pans.',
-  apply:s=>{s.inputs.find(x=>x.id==='c20').pan=100;},fixed:s=>Math.abs(s.inputs.find(x=>x.id==='c20').pan)<=55,ans:'BGV 2 (ch 20) was panned hard right. Keep BGVs within about ±50.',card:'Stream sounds lopsided'},
+  apply:s=>{s.inputs.find(x=>x.id==='c20').pan=100;},fixed:s=>Math.abs(s.inputs.find(x=>x.id==='c20').pan)<=55,ans:'BGV 2 (ch 20) was panned hard right. Keep BGVs within about ±50.',card:'Stream sounds lopsided, or something only on one side'},
  {id:'mtx',sym:'Online viewers hear nothing. The room sounds completely normal.',hint:'The stream has its own output, separate from Main LR.',
   apply:s=>{s.mtx.m1.on=false;},fixed:s=>s.mtx.m1.on,ans:'MTX 1/2 (stream L/R) was muted. Always check MTX first, then vMix, then the ATEM.',card:'No audio on the livestream'},
  {id:'mg1',sym:'The drums disappeared everywhere: the house, the stream and the drummer’s in-ears.',hint:'Something mutes channels 1–8 and their sends together.',
-  apply:s=>{s.mg[0]=true;},fixed:s=>!s.mg[0],ans:'Mute group 1 (drums) was on. A channel mute, including a mute group, silences pre-fader sends too.',card:'One mic or instrument has no sound'}
+  apply:s=>{s.mg[0]=true;},fixed:s=>!s.mg[0],ans:'Mute group 1 (drums) was on. A channel mute, including a mute group, silences pre-fader sends too.',card:'One mic has no sound, but its meter is moving'}
+];
+const ch=id=>ST.inputs.find(x=>x.id===id);
+function chanDbAt(id,f){const x=IN[id],n=A.in[id];return (x.proc.hpf&&x.proc.hpf.on?respDb(n.h1,f)+respDb(n.h2,f):0)+eqDbAt(n.eqb,x.proc.eqOn,f);}
+const ADV_DRILLS=[
+ {id:'harsh',sym:'People say the lead vocal is harsh and piercing, especially on high notes.',hint:'Select the lead (ch 23), open EQ and look for a big boost in the upper mids (2–5 kHz).',
+  apply:s=>{const e=s.inputs.find(x=>x.id==='c23').proc.eq[3];e.t='PEQ';e.f=3100;e.g=11;e.q=1.4;},fixed:()=>chanDbAt('c23',3100)<=4,ans:'Band 4 on the lead was boosted about +11 dB at 3.1 kHz. Cut it back (the scene has +2 dB). Boost gently; cut first.',card:'Harsh, crunchy or clipping sound'},
+ {id:'boomy',sym:'The room is boomy: the bass is rumbling and covering everything.',hint:'Check the bass channels (9 and 10). Look for a big low boost, or just bring the bass down.',
+  apply:s=>{const e=s.inputs.find(x=>x.id==='c9').proc.eq[1];e.g=10;e.q=2;},fixed:()=>chanDbAt('c9',120)<=3||IN.c9.fader<=-8,ans:'Bass Lo (ch 9) had about +10 dB at 120 Hz. Cutting that boost, or lowering the bass channel, cleans up the room.',card:'Room sounds too boomy'},
+ {id:'muddy',seg:'speak',sym:'The pastor sounds muddy and boomy, and you can hear stage rumble when he walks near the podium.',hint:'Select the Podium (ch 17). Check the low cut (HPF) and the low mids.',
+  apply:s=>{const x=s.inputs.find(x=>x.id==='c17');x.on=true;x.proc.hpf.on=false;x.proc.eq[0].g=6;},fixed:()=>IN.c17.proc.hpf.on&&IN.c17.proc.hpf.f>=80&&chanDbAt('c17',232)<=0,ans:'The Podium’s low cut was off and the 232 Hz band was boosted +6 dB. Turn the HPF on (the scene uses 117 Hz) and cut the low mids.',ref:'Learning Path › 14. EQ and dynamics'},
+ {id:'gate',sym:'The kick keeps dropping out. Its meter moves, but most hits barely come through.',hint:'Select the kick (ch 1), open HPF & Gate and compare the level with the threshold.',
+  apply:s=>{s.inputs.find(x=>x.id==='c1').proc.gate.thr=-2;},fixed:()=>!IN.c1.proc.gate.on||IN.c1.proc.gate.thr<=-20,ans:'The kick gate threshold was at −2 dB, above most hits, so the gate stayed shut. The scene uses −47 dB.',card:'One mic has no sound, but its meter is moving'},
+ {id:'squash',sym:'The lead sounds flat and small, and gets lost when the band plays.',hint:'Select the lead (ch 23) and open the Compressor. Watch the gain reduction.',
+  apply:s=>{const d=s.inputs.find(x=>x.id==='c23').proc.dyn;d.thr=-48;d.ratio=20;d.gain=0;},fixed:()=>{const d=IN.c23.proc.dyn;return !d.on||(d.thr>=-30&&d.ratio<=7);},ans:'The lead compressor was crushing her: threshold −48 dB at 20:1. The scene uses −16 dB at 3:1.',card:'Vocals too loud or buried online, or speech too quiet'},
+ {id:'fb',sym:'A ring builds up in the singers’ wedges after someone turned the lead’s wedge up. It’s getting louder.',hint:'Listen to the wedge and find the loudest frequency on Bus 1’s EQ. Cut it, or turn the wedge back down.',
+  apply:s=>{s.inputs.find(x=>x.id==='c23').sends[1].lvl=10;s.buses.b1.fader=3;},fixed:()=>loopGainDb()<-4,ans:'Too much lead in the wedge pushed it into feedback around 2.5 kHz. A narrow cut on Bus 1 at the ringing frequency, or less wedge, stops it. Never boost to fix feedback.',card:'Squealing during singing, or from the headset'}
 ];
 let drill=null,dTimer=null,lastDrill=null;
 function startDrill(){
   ST=serviceState();indexState();
-  let pool=DRILLS.filter(d=>d.id!==lastDrill);const d=pool[Math.floor(Math.random()*pool.length)];lastDrill=d.id;
+  let pool=(ADV?ADV_DRILLS:DRILLS).filter(d=>d.id!==lastDrill);const d=pool[Math.floor(Math.random()*pool.length)];lastDrill=d.id;
   d.apply(ST);drill={d,t0:Date.now(),hint:false,done:false};
-  if(seg!=='pw')setSeg('pw',true);
-  setListen(['mtx','keys','pan'].includes(d.id)?'stream':d.id==='post'?'wedge':'house');
+  setSeg(d.seg||'pw',true);
+  setListen(['mtx','keys','pan'].includes(d.id)?'stream':['post','fb'].includes(d.id)?'wedge':'house');
+  if(ADV){sel={t:'in',id:'c23'};selTab='route';}
   changed();renderDrill();clearInterval(dTimer);dTimer=setInterval(()=>{if(drill&&!drill.done){const e=$('#dt');if(e)e.textContent=secs();}},500);}
 const secs=()=>{const s=Math.floor((Date.now()-drill.t0)/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
 function renderDrill(){const b=$('#drillBody');if(!drill){b.innerHTML='A drill breaks one thing, like a Sunday gone wrong. Listen, find it, fix it. The timer stops when it’s fixed.';return;}
   const d=drill.d;b.className='';
   b.innerHTML=`<div class="sym">“${esc(d.sym)}”</div><div class="row"><span class="timer" id="dt">${drill.done?drill.time:secs()}</span>${drill.done?'':'<button id="hintB">Hint</button><button id="showB">Show me</button>'}</div>`+
    (drill.hint&&!drill.done?`<div class="hint">${esc(d.hint)}</div>`:'')+
-   (drill.done?`<div class="ok-msg"><b>${drill.shown?'Here it was':'Fixed in '+drill.time}.</b> ${esc(d.ans)}<br><span class="note">In the app: Fix it › “${esc(d.card)}”.</span></div>`:'');
+   (drill.done?`<div class="ok-msg"><b>${drill.shown?'Here it was':'Fixed in '+drill.time}.</b> ${esc(d.ans)}<br><span class="note">${d.card?'In the app: Fix it › “'+esc(d.card)+'”.':esc(d.ref||'')}</span></div>`:'');
   if(!drill.done){$('#hintB').onclick=()=>{drill.hint=true;renderDrill();};$('#showB').onclick=()=>{drill.done=true;drill.shown=true;drill.time=secs();renderDrill();};}
   $('#drillBtn').textContent=drill.done?'Next drill':'New drill';}
 function checkDrill(){if(drill&&!drill.done&&drill.d.fixed(ST)){drill.done=true;drill.time=secs();renderDrill();toast('Fixed! '+drill.time);}}
 $('#drillBtn').onclick=()=>startDrill();
+setInterval(()=>{if(AC)checkDrill();},400);
+
+
+/* ================= Stage 4 UI ================= */
+let ADV=false,selTab='route',actBand=0;
+function hasProc(){if(!sel)return null;if(sel.t==='in'){const x=IN[sel.id];return x.proc&&A.in&&A.in[x.id]&&A.in[x.id].eqb?{o:x,n:A.in[x.id],kind:'in'}:null;}
+  if(sel.t==='bus'){const b=ST.buses[sel.id];return b.proc&&A.bus&&A.bus[sel.id].eqb?{o:b,n:A.bus[sel.id],kind:'bus'}:null;}
+  if(sel.t==='main')return A.main&&A.main.eqb?{o:ST.main,n:A.main,kind:'main'}:null;return null;}
+function renderSel(){const p=$('#selp');p.innerHTML='';if(!sel)return;tapRTA();
+  const h=ADV?hasProc():null;
+  if(!h){renderSelBase(p);return;}
+  const tabs=h.kind==='in'?[['route','Routing'],['gate','HPF & Gate'],['eq','EQ'],['comp','Compressor']]:h.kind==='bus'?[['route','Routing'],['eq','EQ'],['comp','Compressor']]:[['eq','EQ'],['comp','Limiter']];
+  if(!tabs.some(x=>x[0]===selTab))selTab=tabs[0][0];
+  const name=h.kind==='in'?(typeof h.o.num==='number'?'Ch '+h.o.num:h.o.num)+' · '+(h.o.name||'—'):h.kind==='bus'?'Bus '+h.o.num+' · '+h.o.name:'Main LR';
+  const tb=el('div','tabs');tb.innerHTML=`<span class="scrib c-${h.o.col||'WH'}" style="width:auto;min-height:0;padding:4px 8px;font-size:13px;align-self:center">${esc(name)}</span>`;
+  for(const[k,l]of tabs){const b=el('button',k===selTab?'on':'',l);b.onclick=()=>{selTab=k;renderSel();};tb.appendChild(b);}
+  p.appendChild(tb);const body=el('div','pr');p.appendChild(body);
+  if(selTab==='route'){renderSelBase(body);return;}
+  if(selTab==='eq')renderEQ(body,h);else if(selTab==='gate')renderGate(body,h);else renderComp(body,h);}
+function rng(lab,min,max,step,val,fn,fm,logScale){const r=el('div','ctl');const toS=v=>logScale?Math.log(v/min)/Math.log(max/min)*1000:v,fromS=s=>logScale?min*Math.pow(max/min,s/1000):s;
+  r.innerHTML=`<label>${lab}</label><input type="range" min="${logScale?0:min}" max="${logScale?1000:max}" step="${logScale?1:step}" value="${toS(val)}"><output>${fm(val)}</output>`;
+  const i=r.querySelector('input'),o=r.querySelector('output');i.oninput=()=>{let v=fromS(+i.value);if(logScale)v=Math.round(v*(v<100?10:1))/(v<100?10:1);fn(v);o.textContent=fm(v);changed('proc');};return r;}
+const fHz=v=>v>=1000?(v/1000).toFixed(v>=10000?1:2)+'k':Math.round(v)+'';
+const fDb=v=>(v>0?'+':'')+(+v).toFixed(1);
+function resetBtn(h,part){const b=el('button','','Reset to scene');b.onclick=()=>{const src=h.kind==='in'?SCENE.inputs.find(x=>x.id===h.o.id).proc:h.kind==='bus'?SCENE.buses[sel.id].proc:SCENE.main.proc;
+  if(part==='eq'){h.o.proc.eq=clone(src.eq);h.o.proc.eqOn=src.eqOn;if(src.hpf)h.o.proc.hpf=clone(src.hpf);}else h.o.proc[part]=clone(src[part]);changed();};return b;}
+function renderEQ(body,h){const pr=h.o.proc;
+  const top=el('div','row');const on=el('button',pr.eqOn?'on':'','EQ '+(pr.eqOn?'ON':'OFF'));on.onclick=()=>{pr.eqOn=!pr.eqOn;changed();};top.appendChild(on);
+  top.appendChild(resetBtn(h,'eq'));const pk=el('span','note');pk.id='rtaPeak';top.appendChild(pk);body.appendChild(top);
+  const cv=el('canvas','eqc');cv.id='eqc';body.appendChild(cv);
+  const note=el('div','note','Purple line: what the EQ does. Grey: the sound right now (after processing). Drag a dot to move a band.');note.style.marginTop='4px';body.appendChild(note);
+  if(pr.hpf){const hb=el('div','band');hb.innerHTML='<div class="row"><b>Low cut (HPF)</b></div>';const hon=el('button',pr.hpf.on?'on':'',pr.hpf.on?'ON':'OFF');hon.onclick=()=>{pr.hpf.on=!pr.hpf.on;changed();};hb.firstChild.appendChild(hon);
+    hb.appendChild(rng('Freq',20,400,1,pr.hpf.f,v=>pr.hpf.f=v,v=>fHz(v)+' Hz',true));body.appendChild(hb);}
+  const bw=el('div','bands');const names=['Band 1 · Low','Band 2 · Low mid','Band 3 · High mid','Band 4 · High'];
+  pr.eq.forEach((e,i)=>{const b=el('div','band'+(i===actBand?' act':''));b.onclick=()=>{if(actBand!==i){actBand=i;bw.querySelectorAll('.band').forEach((x,j)=>x.classList.toggle('act',j===i));drawEQ();}};
+    b.innerHTML=`<div class="row" style="justify-content:space-between"><b>${names[i]}</b><select>${['LCut','LShv','PEQ','VEQ','HShv','HCut'].map(k=>`<option ${k===e.t?'selected':''}>${k}</option>`).join('')}</select></div>`;
+    b.querySelector('select').onchange=ev=>{e.t=ev.target.value;changed('proc');};
+    b.appendChild(rng('Freq',20,20000,1,e.f,v=>e.f=v,v=>fHz(v),true));
+    b.appendChild(rng('Gain',-15,15,.25,e.g,v=>e.g=v,fDb,false));
+    b.appendChild(rng('Q',.3,10,.1,e.q,v=>e.q=v,v=>(+v).toFixed(1),true));bw.appendChild(b);});
+  body.appendChild(bw);
+  eqDrag(cv,h);requestAnimationFrame(drawEQ);}
+const FMIN=20,FMAX=20000,DBR=18;
+function fx(f,w){return Math.log(f/FMIN)/Math.log(FMAX/FMIN)*w;}function xf(x,w){return FMIN*Math.pow(FMAX/FMIN,x/w);}
+function drawEQ(){const cv=$('#eqc');if(!cv)return;const h=hasProc();if(!h)return;const dpr=window.devicePixelRatio||1;const W=cv.clientWidth,H=cv.clientHeight;if(cv.width!==W*dpr){cv.width=W*dpr;cv.height=H*dpr;}
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
+  c.strokeStyle='#222833';c.lineWidth=1;c.fillStyle='#69707d';c.font='10px system-ui';
+  for(const f of[50,100,200,500,1000,2000,5000,10000]){const x=fx(f,W);c.beginPath();c.moveTo(x,0);c.lineTo(x,H);c.stroke();c.fillText(fHz(f),x+2,H-3);}
+  for(const d of[-12,-6,0,6,12]){const y=H/2-d/DBR*(H/2);c.strokeStyle=d===0?'#3a4150':'#222833';c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke();c.fillText((d>0?'+':'')+d,2,y-2);}
+  // RTA
+  if(A.rta){const n=A.rta.frequencyBinCount,buf=new Float32Array(n);A.rta.getFloatFrequencyData(buf);const sr=AC.sampleRate;c.beginPath();c.moveTo(0,H);let best=-200,bf=0;
+    for(let x=0;x<W;x+=2){const f=xf(x,W);const i=Math.min(n-1,Math.round(f/(sr/2)*n));const v=buf[i];if(v>best&&f>60){best=v;bf=f;}const y=H-(Math.max(-100,v)+100)/90*H;c.lineTo(x,y);}
+    c.lineTo(W,H);c.closePath();c.fillStyle='rgba(160,170,190,.18)';c.fill();const pk=$('#rtaPeak');if(pk)pk.textContent=best>-90?'Loudest now: '+fHz(bf)+' Hz':'';}
+  // curve
+  const pr=h.o.proc,n=h.n;const N=Math.max(64,Math.floor(W/2));const fr=new Float32Array(N);for(let i=0;i<N;i++)fr[i]=xf(i*W/(N-1),W);
+  const tot=new Float32Array(N);const m=new Float32Array(N),ph=new Float32Array(N);
+  const add=node=>{node.getFrequencyResponse(fr,m,ph);for(let i=0;i<N;i++)tot[i]+=20*Math.log10(Math.max(m[i],1e-6));};
+  if(pr.eqOn)n.eqb.bands.forEach(add);if(h.kind==='in'&&pr.hpf&&pr.hpf.on){add(n.h1);add(n.h2);}
+  c.beginPath();for(let i=0;i<N;i++){const x=i*W/(N-1),y=H/2-Math.max(-DBR*1.2,Math.min(DBR*1.2,tot[i]))/DBR*(H/2);i?c.lineTo(x,y):c.moveTo(x,y);}c.strokeStyle='#a77bf3';c.lineWidth=2.2;c.stroke();
+  pr.eq.forEach((e,i)=>{const x=fx(e.f,W),y=H/2-(['PEQ','VEQ','LShv','HShv'].includes(e.t)?e.g:0)/DBR*(H/2);c.beginPath();c.arc(x,y,i===actBand?7:5,0,7);c.fillStyle=i===actBand?'#e0a526':'#a77bf3';c.fill();c.fillStyle='#111';c.font='bold 9px system-ui';c.fillText(i+1,x-2.5,y+3);});}
+function eqDrag(cv,h){let on=false;const mv=e=>{const r=cv.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;const b=h.o.proc.eq[actBand];
+  b.f=Math.round(Math.max(20,Math.min(20000,xf(x,r.width))));if(['PEQ','VEQ','LShv','HShv'].includes(b.t))b.g=Math.round(Math.max(-15,Math.min(15,(r.height/2-y)/(r.height/2)*DBR))*4)/4;changed('proc');};
+  cv.addEventListener('pointerdown',e=>{const r=cv.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;let best=1e9;h.o.proc.eq.forEach((b,i)=>{const bx=fx(b.f,r.width),by=r.height/2-(['PEQ','VEQ','LShv','HShv'].includes(b.t)?b.g:0)/DBR*(r.height/2);const d=(bx-x)**2+(by-y)**2;if(d<best){best=d;actBand=i;}});
+    on=true;cv.setPointerCapture(e.pointerId);mv(e);});
+  cv.addEventListener('pointermove',e=>{if(on)mv(e);});const end=()=>{if(on){on=false;renderSel();}};cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);}
+function renderGate(body,h){const pr=h.o.proc;
+  if(pr.hpf){const hb=el('div','band');hb.innerHTML='<div class="row"><b>Low cut (HPF)</b> <span class="note">removes rumble below the frequency</span></div>';const hon=el('button',pr.hpf.on?'on':'',pr.hpf.on?'ON':'OFF');hon.onclick=()=>{pr.hpf.on=!pr.hpf.on;changed();};hb.firstChild.appendChild(hon);
+    hb.appendChild(rng('Freq',20,400,1,pr.hpf.f,v=>pr.hpf.f=v,v=>fHz(v)+' Hz',true));body.appendChild(hb);}
+  const gt=pr.gate;if(!gt){body.appendChild(el('p','note','No gate on this channel.'));return;}
+  const gb=el('div','band');gb.style.marginTop='8px';
+  const row=el('div','row');row.innerHTML='<b>Gate</b>';const on=el('button',gt.on?'on':'',gt.on?'ON':'OFF');on.onclick=()=>{gt.on=!gt.on;changed();};row.appendChild(on);
+  const ms=el('select','');ms.innerHTML=['GATE','EXP2','EXP3','EXP4','DUCK'].map(k=>`<option ${k===gt.mode?'selected':''}>${k}</option>`).join('');ms.onchange=()=>{gt.mode=ms.value;changed('proc');};row.appendChild(ms);row.appendChild(resetBtn(h,'gate'));gb.appendChild(row);
+  gb.appendChild(el('div','note',gt.mode==='DUCK'?`Ducker: turns this channel down by the range whenever the key (${gt.key?'Ch '+gt.key+' '+(IN['c'+gt.key]||{}).name:'itself'}) goes over the threshold.`:'Closes the channel when the signal drops below the threshold, cutting bleed and noise. Too high and it chops the start or end of notes.'));
+  gb.appendChild(el('div','lbl','Input level vs threshold'));const lv=el('div','lvm','<i id="gLv"></i><b id="gTh"></b>');gb.appendChild(lv);
+  gb.appendChild(el('div','lbl','Gain reduction'));gb.appendChild(el('div','grm','<i id="grBar"></i>'));
+  gb.appendChild(rng('Threshold',-80,0,.5,gt.thr,v=>gt.thr=v,v=>fDb(v)+' dB'));
+  gb.appendChild(rng('Range',3,60,.5,gt.range,v=>gt.range=v,v=>(+v).toFixed(1)+' dB'));
+  gb.appendChild(rng('Attack',0,120,1,gt.att,v=>gt.att=v,v=>Math.round(v)+' ms'));
+  gb.appendChild(rng('Hold',.02,2000,1,Math.max(.02,gt.hold),v=>gt.hold=v,v=>(v<10?(+v).toFixed(2):Math.round(v))+' ms',true));
+  gb.appendChild(rng('Release',5,4000,1,gt.rel,v=>gt.rel=v,v=>Math.round(v)+' ms',true));
+  if(!WORKLET)gb.appendChild(el('p','note','This browser can’t run the gate here. Open the online version to hear it.'));
+  body.appendChild(gb);}
+const RATIOS=[1.1,1.3,1.5,2,2.5,3,4,5,7,10,20,100];
+function renderComp(body,h){const d=h.o.proc.dyn;if(!d){body.appendChild(el('p','note','No compressor here.'));return;}
+  const row=el('div','row');row.innerHTML=`<b>${h.kind==='main'?'Limiter':'Compressor'}</b>`;const on=el('button',d.on?'on':'',d.on?'ON':'OFF');on.onclick=()=>{d.on=!d.on;changed();};row.appendChild(on);
+  if(h.kind==='in'){const pos=el('button','',(d.pos==='PRE'?'Before EQ':'After EQ'));pos.onclick=()=>{d.pos=d.pos==='PRE'?'POST':'PRE';wireOrder(h.o,h.n);changed();};row.appendChild(pos);}
+  row.appendChild(resetBtn(h,'dyn'));body.appendChild(row);
+  body.appendChild(el('div','note','Turns down anything louder than the threshold by the ratio. 3:1 means 3 dB over comes out 1 dB over. Make-up gain adds level back.'));
+  const cv=el('canvas','eqc');cv.id='tfc';cv.style.height='150px';cv.style.maxWidth='260px';body.appendChild(cv);
+  body.appendChild(el('div','lbl','Gain reduction'));body.appendChild(el('div','grm','<i id="grBar"></i>'));
+  body.appendChild(rng('Threshold',-60,0,.5,d.thr,v=>d.thr=v,v=>fDb(v)+' dB'));
+  const rr=el('div','ctl');rr.innerHTML=`<label>Ratio</label><select>${RATIOS.map(r=>`<option value="${r}" ${r===d.ratio?'selected':''}>${r===100?'∞':r}:1</option>`).join('')}</select><output></output>`;rr.querySelector('select').onchange=e=>{d.ratio=+e.target.value;changed('proc');};body.appendChild(rr);
+  body.appendChild(rng('Knee',0,5,1,d.knee,v=>d.knee=v,v=>Math.round(v)));
+  body.appendChild(rng('Attack',0,120,1,d.att,v=>d.att=v,v=>Math.round(v)+' ms'));
+  body.appendChild(rng('Release',5,4000,1,d.rel,v=>d.rel=v,v=>Math.round(v)+' ms',true));
+  body.appendChild(rng('Make-up',0,24,.5,d.gain,v=>d.gain=v,v=>'+'+(+v).toFixed(1)+' dB'));}
+function drawTF(){const cv=$('#tfc');if(!cv)return;const h=hasProc();if(!h)return;const d=h.o.proc.dyn;const dpr=window.devicePixelRatio||1;const W=cv.clientWidth,H=cv.clientHeight;if(cv.width!==W*dpr){cv.width=W*dpr;cv.height=H*dpr;}
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);const X=v=>(v+60)/60*W,Y=v=>H-(v+60)/60*H;
+  c.strokeStyle='#2a303b';c.beginPath();c.moveTo(X(-60),Y(-60));c.lineTo(X(0),Y(0));c.stroke();
+  c.strokeStyle='#e0a526';c.lineWidth=2;c.beginPath();for(let i=-60;i<=0;i++){const r=Math.min(20,d.ratio),o=i<d.thr?i:d.thr+(i-d.thr)/r;const y=Y(Math.min(0,o+(d.on?d.gain:0)));i===-60?c.moveTo(X(i),y):c.lineTo(X(i),y);}c.stroke();
+  c.fillStyle='#69707d';c.font='10px system-ui';c.fillText('in →',W-28,H-4);c.fillText('out',3,10);
+  const th=X(d.thr);c.strokeStyle='#e5534b';c.setLineDash([3,3]);c.beginPath();c.moveTo(th,0);c.lineTo(th,H);c.stroke();c.setLineDash([]);
+  const lv=h.n.lastLv;if(lv!=null&&lv>-60){c.fillStyle='#3fd27a';c.beginPath();c.arc(X(lv),Y(Math.max(-60,lv<d.thr?lv:d.thr+(lv-d.thr)/Math.min(20,d.ratio))),5,0,7);c.fill();}}
+function tapRTA(){if(!A.rta&&AC){A.rta=AC.createAnalyser();A.rta.fftSize=4096;A.rta.smoothingTimeConstant=.82;}if(!A.rta)return;
+  if(A.rtaSrc){try{A.rtaSrc.disconnect(A.rta);}catch(e){}A.rtaSrc=null;}
+  const h=ADV?hasProc():null;if(!h)return;const node=h.kind==='in'?h.n.post:h.n.cmp.out;node.connect(A.rta);A.rtaSrc=node;}
+function advTick(){if(!ADV||!AC)return;const h=hasProc();if(!h)return;
+  const a=h.kind==='in'?h.n.meter:h.n.meter;if(a){const b=new Float32Array(512);a.getFloatTimeDomainData(b);let pk=0;for(const v of b)pk=Math.max(pk,Math.abs(v));const db=pk>0?20*Math.log10(pk):-90;h.n.lastLv=h.n.lastLv==null?db:Math.max(db,h.n.lastLv-1.2);}
+  const gr=$('#grBar');if(gr){const v=selTab==='gate'?(h.n.gr||0):h.n.cmp.comp.reduction;gr.style.width=Math.min(100,Math.abs(v)/30*100)+'%';gr.title=v.toFixed(1)+' dB';}
+  const gl=$('#gLv'),gth=$('#gTh');if(gl&&h.o.proc.gate){gl.style.width=Math.max(0,(h.n.lastLv+80)/80*100)+'%';gth.style.left=((h.o.proc.gate.thr+80)/80*100)+'%';}
+  drawEQ();drawTF();}
+$('#advBtn').onclick=()=>{ADV=!ADV;$('#advBtn').classList.toggle('on',ADV);if(ADV&&sel&&sel.t==='in'&&!IN[sel.id].proc)sel={t:'in',id:'c23'};selTab=ADV?'eq':'route';renderAll();
+  toast(ADV?'Stage 4 on: tap SEL, then EQ, Compressor or HPF & Gate. Drills now practise EQ and dynamics.':'Stage 4 off.',4000);};
 
 /* ================= glue ================= */
 function changed(light){if(AC){for(const x of ST.inputs)applyIn(x);for(const id in ST.buses)applyBus(id);applyMain();applyListen();}
   checkDrill();
+  if(light==='proc')return;
   if(light==='drag'){renderPathsOnly();return;}
   if(light){renderPathsOnly();renderBank('L');renderBank('R');return;}
   renderAll();}
@@ -658,8 +877,8 @@ $('#playBtn').onclick=async()=>{if(!AC)return;if(AC.state==='running'){await AC.
 const buf=new Float32Array(512);
 function meterLoop(){for(const m of meters){const a=m.an();if(!a)continue;a.getFloatTimeDomainData(buf);let pk=0;for(let i=0;i<buf.length;i+=2){const v=Math.abs(buf[i]);if(v>pk)pk=v;}
   const db=pk>0?20*Math.log10(pk):-90;const h=Math.max(0,Math.min(1,(db+60)/60));const prev=m.h||0;const nh=h>prev?h:prev*.9+h*.1;m.h=nh;m.el.style.height=(nh*100)+'%';}
-  requestAnimationFrame(meterLoop);}
-$('#startBtn').onclick=async()=>{$('#start').remove();buildAudio();setP(A.vol.gain,(+$('#vol').value/100)**2*1.6);startCrowd();startSeq();await AC.resume();renderAll();meterLoop();};
+  advTick();requestAnimationFrame(meterLoop);}
+$('#startBtn').onclick=async()=>{$('#start').remove();AC=new (window.AudioContext||window.webkitAudioContext)();await loadWorklet();buildAudio();setP(A.vol.gain,(+$('#vol').value/100)**2*1.6);startCrowd();startSeq();await AC.resume();renderAll();meterLoop();};
 renderAll();
 </script>
 </body>
