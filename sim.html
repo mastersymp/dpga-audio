@@ -335,7 +335,7 @@ function buildAudio(){
   A.aesHouse=g(1);A.houseMono.connect(A.aesHouse);A.aesHouse.connect(A.lis.house);
   // matrix 1/2 stream
   A.mtx={in:stereoGain(1),mute:stereoGain(1),fad:stereoGain(1),meter:an()};
-  A.mtx.in.connect(A.mtx.mute);A.mtx.mute.connect(A.mtx.fad);A.mtx.fad.connect(A.mtx.meter);A.mtx.fad.connect(A.lis.stream);
+  {const e=eqBlock(),c=compBlock();A.mtx.in.connect(e.in);e.out.connect(c.in);c.out.connect(A.mtx.mute);A.mtx.eqb=e;A.mtx.cmp=c;}A.mtx.mute.connect(A.mtx.fad);A.mtx.fad.connect(A.mtx.meter);A.mtx.fad.connect(A.lis.stream);
   // stereo buses -> LR and MTX
   for(const id of['b9','b11','b13','b15','b8','b2']){const n=A.bus[id];
     let srcN=n.fad;
@@ -380,6 +380,7 @@ const PROC={"c1":{"hpf":{"on":true,"f":34.0},"gate":{"on":true,"mode":"GATE","th
 for(const x of SCENE.inputs)if(PROC[x.id])x.proc=JSON.parse(JSON.stringify(PROC[x.id]));
 for(const id in SCENE.buses)if(PROC[id])SCENE.buses[id].proc=JSON.parse(JSON.stringify(PROC[id]));
 SCENE.main.proc=JSON.parse(JSON.stringify(PROC.main));
+SCENE.mtx.m1.proc={dyn:{on:true,thr:-2,ratio:100,knee:0,gain:0,att:0,rel:63,auto:false,pos:'POST'},eqOn:true,eq:[{t:'LCut',f:36,g:3,q:2},{t:'PEQ',f:52.6,g:4.75,q:1},{t:'PEQ',f:403.7,g:-2,q:1.1},{t:'PEQ',f:1780,g:2,q:.7}]};
 ST=serviceState();indexState();
 // dynamics position: PRE = compressor before EQ (from the scene)
 const GATE_SRC=`class G extends AudioWorkletProcessor{constructor(){super();this.p={on:false,mode:'GATE',thr:-60,range:60,att:1,hold:20,rel:100};this.env=0;this.g=1;this.hc=0;this.mn=1;this.n=0;this.port.onmessage=e=>Object.assign(this.p,e.data);}
@@ -481,7 +482,7 @@ function applyBus(id){const b=ST.buses[id],n=A.bus&&A.bus[id];if(!n)return;apply
   setP(n.mute.gain,busMuted(b)?0:1);setP(n.fad.gain,lin(busGainDb(b)));
   if(n.lr)setP(n.lr.gain,b.lr?1:0);if(n.mx)setP(n.mx.gain,b.mtx!=null?lin(b.mtx):0);
   if(A.s16[id])setP(A.s16[id].gain,ST.aes?1:0);}
-function applyMain(){if(!A.main)return;applyBusProc(A.main,ST.main.proc);const m=ST.main;setP(A.main.mute.gain,m.on?1:0);setP(A.main.fad.gain,lin(m.fader));setP(A.aesHouse.gain,ST.aes?1:0);
+function applyMain(){if(!A.main)return;applyBusProc(A.main,ST.main.proc);applyBusProc(A.mtx,ST.mtx.m1.proc);const m=ST.main;setP(A.main.mute.gain,m.on?1:0);setP(A.main.fad.gain,lin(m.fader));setP(A.aesHouse.gain,ST.aes?1:0);
   const x=ST.mtx.m1;setP(A.mtx.mute.gain,x.on?1:0);setP(A.mtx.fad.gain,lin(x.fader));}
 function applyAll(){if(!AC)return;for(const x of ST.inputs){wireSendTypes(x);applyIn(x);}for(const id in ST.buses)applyBus(id);applyMain();applyListen();}
 
@@ -724,6 +725,8 @@ const DRILLS=[
 const ch=id=>ST.inputs.find(x=>x.id===id);
 function chanDbAt(id,f){const x=IN[id],n=A.in[id];return (x.proc.hpf&&x.proc.hpf.on?respDb(n.h1,f)+respDb(n.h2,f):0)+eqDbAt(n.eqb,x.proc.eqOn,f);}
 const ADV_DRILLS=[
+ {id:'streambass',sym:'Online viewers say the stream is boomy and the kick and bass sound distorted on their speakers. The room sounds fine.',hint:'Only the stream has the problem, so look at the stream\u2019s own processing: MTX 1/2 (right bank, Mtx/Main).',
+  apply:s=>{const e=s.mtx.m1.proc.eq[1];e.g=13;e.q=1;},fixed:()=>eqDbAt(A.mtx.eqb,ST.mtx.m1.proc.eqOn,53)<=8,ans:'MTX 1/2 had +13 dB at 53 Hz. Phones and laptops can\u2019t play that much low end, so it distorts and pumps the stream limiter. The scene uses +4.75 dB.',card:'Stream sounds distorted'},
  {id:'harsh',sym:'People say the lead vocal is harsh and piercing, especially on high notes.',hint:'Select the lead (ch 23), open EQ and look for a big boost in the upper mids (2–5 kHz).',
   apply:s=>{const e=s.inputs.find(x=>x.id==='c23').proc.eq[3];e.t='PEQ';e.f=3100;e.g=11;e.q=1.4;},fixed:()=>chanDbAt('c23',3100)<=4,ans:'Band 4 on the lead was boosted about +11 dB at 3.1 kHz. Cut it back (the scene has +2 dB). Boost gently; cut first.',card:'Harsh, crunchy or clipping sound'},
  {id:'boomy',sym:'The room is boomy: the bass is rumbling and covering everything.',hint:'Check the bass channels (9 and 10). Look for a big low boost, or just bring the bass down.',
@@ -743,7 +746,7 @@ function startDrill(){
   let pool=(ADV?ADV_DRILLS:DRILLS).filter(d=>d.id!==lastDrill);const d=pool[Math.floor(Math.random()*pool.length)];lastDrill=d.id;
   d.apply(ST);drill={d,t0:Date.now(),hint:false,done:false};
   setSeg(d.seg||'pw',true);
-  setListen(['mtx','keys','pan'].includes(d.id)?'stream':['post','fb'].includes(d.id)?'wedge':'house');
+  setListen(['mtx','keys','pan','streambass'].includes(d.id)?'stream':['post','fb'].includes(d.id)?'wedge':'house');
   if(ADV){sel={t:'in',id:'c23'};selTab='route';}
   changed();renderDrill();clearInterval(dTimer);dTimer=setInterval(()=>{if(drill&&!drill.done){const e=$('#dt');if(e)e.textContent=secs();}},500);}
 const secs=()=>{const s=Math.floor((Date.now()-drill.t0)/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
@@ -763,13 +766,14 @@ setInterval(()=>{if(AC)checkDrill();},400);
 let ADV=false,selTab='route',actBand=0;
 function hasProc(){if(!sel)return null;if(sel.t==='in'){const x=IN[sel.id];return x.proc&&A.in&&A.in[x.id]&&A.in[x.id].eqb?{o:x,n:A.in[x.id],kind:'in'}:null;}
   if(sel.t==='bus'){const b=ST.buses[sel.id];return b.proc&&A.bus&&A.bus[sel.id].eqb?{o:b,n:A.bus[sel.id],kind:'bus'}:null;}
-  if(sel.t==='main')return A.main&&A.main.eqb?{o:ST.main,n:A.main,kind:'main'}:null;return null;}
+  if(sel.t==='main')return A.main&&A.main.eqb?{o:ST.main,n:A.main,kind:'main'}:null;
+  if(sel.t==='mtx'&&sel.id==='m1')return A.mtx&&A.mtx.eqb?{o:ST.mtx.m1,n:A.mtx,kind:'mtx'}:null;return null;}
 function renderSel(){const p=$('#selp');p.innerHTML='';if(!sel)return;tapRTA();
   const h=ADV?hasProc():null;
   if(!h){renderSelBase(p);return;}
-  const tabs=h.kind==='in'?[['route','Routing'],['gate','HPF & Gate'],['eq','EQ'],['comp','Compressor']]:h.kind==='bus'?[['route','Routing'],['eq','EQ'],['comp','Compressor']]:[['eq','EQ'],['comp','Limiter']];
+  const tabs=h.kind==='in'?[['route','Routing'],['gate','HPF & Gate'],['eq','EQ'],['comp','Compressor']]:h.kind==='bus'?[['route','Routing'],['eq','EQ'],['comp','Compressor']]:h.kind==='mtx'?[['route','Routing'],['eq','EQ'],['comp','Limiter']]:[['eq','EQ'],['comp','Limiter']];
   if(!tabs.some(x=>x[0]===selTab))selTab=tabs[0][0];
-  const name=h.kind==='in'?(typeof h.o.num==='number'?'Ch '+h.o.num:h.o.num)+' · '+(h.o.name||'—'):h.kind==='bus'?'Bus '+h.o.num+' · '+h.o.name:'Main LR';
+  const name=h.kind==='in'?(typeof h.o.num==='number'?'Ch '+h.o.num:h.o.num)+' · '+(h.o.name||'—'):h.kind==='bus'?'Bus '+h.o.num+' · '+h.o.name:h.kind==='mtx'?'MTX 1/2 · Stream L/R':'Main LR';
   const tb=el('div','tabs');tb.innerHTML=`<span class="scrib c-${h.o.col||'WH'}" style="width:auto;min-height:0;padding:4px 8px;font-size:13px;align-self:center">${esc(name)}</span>`;
   for(const[k,l]of tabs){const b=el('button',k===selTab?'on':'',l);b.onclick=()=>{selTab=k;renderSel();};tb.appendChild(b);}
   p.appendChild(tb);const body=el('div','pr');p.appendChild(body);
@@ -780,7 +784,7 @@ function rng(lab,min,max,step,val,fn,fm,logScale){const r=el('div','ctl');const 
   const i=r.querySelector('input'),o=r.querySelector('output');i.oninput=()=>{let v=fromS(+i.value);if(logScale)v=Math.round(v*(v<100?10:1))/(v<100?10:1);fn(v);o.textContent=fm(v);changed('proc');};return r;}
 const fHz=v=>v>=1000?(v/1000).toFixed(v>=10000?1:2)+'k':Math.round(v)+'';
 const fDb=v=>(v>0?'+':'')+(+v).toFixed(1);
-function resetBtn(h,part){const b=el('button','','Reset to scene');b.onclick=()=>{const src=h.kind==='in'?SCENE.inputs.find(x=>x.id===h.o.id).proc:h.kind==='bus'?SCENE.buses[sel.id].proc:SCENE.main.proc;
+function resetBtn(h,part){const b=el('button','','Reset to scene');b.onclick=()=>{const src=h.kind==='in'?SCENE.inputs.find(x=>x.id===h.o.id).proc:h.kind==='bus'?SCENE.buses[sel.id].proc:h.kind==='mtx'?SCENE.mtx.m1.proc:SCENE.main.proc;
   if(part==='eq'){h.o.proc.eq=clone(src.eq);h.o.proc.eqOn=src.eqOn;if(src.hpf)h.o.proc.hpf=clone(src.hpf);}else h.o.proc[part]=clone(src[part]);changed();};return b;}
 function renderEQ(body,h){const pr=h.o.proc;
   const top=el('div','row');const on=el('button',pr.eqOn?'on':'','EQ '+(pr.eqOn?'ON':'OFF'));on.onclick=()=>{pr.eqOn=!pr.eqOn;changed();};top.appendChild(on);
@@ -839,7 +843,7 @@ function renderGate(body,h){const pr=h.o.proc;
   body.appendChild(gb);}
 const RATIOS=[1.1,1.3,1.5,2,2.5,3,4,5,7,10,20,100];
 function renderComp(body,h){const d=h.o.proc.dyn;if(!d){body.appendChild(el('p','note','No compressor here.'));return;}
-  const row=el('div','row');row.innerHTML=`<b>${h.kind==='main'?'Limiter':'Compressor'}</b>`;const on=el('button',d.on?'on':'',d.on?'ON':'OFF');on.onclick=()=>{d.on=!d.on;changed();};row.appendChild(on);
+  const row=el('div','row');row.innerHTML=`<b>${h.kind==='main'||h.kind==='mtx'?'Limiter':'Compressor'}</b>`;const on=el('button',d.on?'on':'',d.on?'ON':'OFF');on.onclick=()=>{d.on=!d.on;changed();};row.appendChild(on);
   if(h.kind==='in'){const pos=el('button','',(d.pos==='PRE'?'Before EQ':'After EQ'));pos.onclick=()=>{d.pos=d.pos==='PRE'?'POST':'PRE';wireOrder(h.o,h.n);changed();};row.appendChild(pos);}
   row.appendChild(resetBtn(h,'dyn'));body.appendChild(row);
   body.appendChild(el('div','note','Turns down anything louder than the threshold by the ratio. 3:1 means 3 dB over comes out 1 dB over. Make-up gain adds level back.'));
