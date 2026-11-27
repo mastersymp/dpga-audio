@@ -487,6 +487,20 @@
       </div>
     </details>
 
+    <details class="card" data-cat="stream">
+      <summary><span class="tag t-stream">Stream</span>Stream sounds lopsided, or something only on one side</summary>
+      <div class="body">
+        <div class="first"><b>First:</b> listen on headphones. The house is mono, so panning problems only show up on the stream.</div>
+        <ul>
+          <li><b>One side of a stereo pair weak or dead</b> (Keys ch 15/16, USB on AUX 7/8): compare the two meters. If one is far lower or not moving, it's usually a <b>cable or DI</b> problem on that side. Check the lead from the keys into the DI, the DI's outputs, and the XLR into local in 15/16. Swap the cable between songs.</li>
+          <li><b>One voice sitting off to one side:</b> select the channel and check its pan. BGV pans are set to taste each Sunday, but keep them off hard left/right. Lead vocal, podium, headset, kick and bass stay centre.</li>
+          <li><b>The whole mix leaning one way:</b> MTX 1 and MTX 2 (Stream L/R) both up and unmuted, and both meters moving. Then check that vMix and the ATEM show both sides moving.</li>
+          <li>Not sure what changed? Reload the DPGASunday scene between songs. It resets every pan except your BGV choices for the day.</li>
+        </ul>
+        <p class="note">Pans don't change the room, so don't adjust them to fix how the house sounds.</p>
+      </div>
+    </details>
+
     <details class="card" data-cat="power">
       <summary><span class="tag t-power">Power</span>Power cut or switch to generator</summary>
       <div class="body">
@@ -999,7 +1013,7 @@
     var t2=document.createElementNS(NS,'text');t2.setAttribute('x',n.x);t2.setAttribute('y',n.y+13);t2.setAttribute('class','s');t2.textContent=n.s;
     g.appendChild(r);g.appendChild(t1);g.appendChild(t2);nodesG.appendChild(g);byId[n.id]={n:n,g:g};
   });
-  var REL={"srcS": ["no sound and no meter", "Wireless mic cutting", "Squealing during singing"], "srcL": ["no sound and no meter", "Hum, buzz", "Musician's in-ears"], "s16": ["Hum, buzz", "Nothing coming out of the house"], "loc": ["no sound and no meter", "Mics and instruments silent"], "aux": ["Video, promo or playback", "Echo, doubling"], "ch": ["meter is moving", "Mics and instruments silent", "Harsh, crunchy"], "mon": ["Musician's in-ears", "Singers can't hear", "Squealing during singing"], "sub": ["No vocal delay", "Nothing coming out of the house", "meter is moving", "Vocals too loud or buried"], "main": ["Nothing coming out of the house", "Harsh, crunchy"], "mtx": ["No audio on the livestream", "Vocals too loud or buried", "Echo, doubling"], "s16o": ["Nothing coming out of the house", "Hum, buzz"], "atem": ["Stream sounds distorted", "No audio on the livestream"], "dr": ["Nothing coming out of the house"], "vmix": ["No audio on the livestream", "Stream sounds distorted", "Echo, doubling"], "amp": ["Only the subs", "Power cut"], "yt": ["No audio on the livestream"], "spk": ["Room sounds too boomy", "Only the subs", "Nothing coming out of the house"]};
+  var REL={"srcS": ["no sound and no meter", "Wireless mic cutting", "Squealing during singing"], "srcL": ["no sound and no meter", "Hum, buzz", "Musician's in-ears"], "s16": ["Hum, buzz", "Nothing coming out of the house"], "loc": ["no sound and no meter", "Mics and instruments silent"], "aux": ["Video, promo or playback", "Echo, doubling"], "ch": ["meter is moving", "Mics and instruments silent", "Harsh, crunchy", "Stream sounds lopsided"], "mon": ["Musician's in-ears", "Singers can't hear", "Squealing during singing"], "sub": ["No vocal delay", "Nothing coming out of the house", "meter is moving", "Vocals too loud or buried"], "main": ["Nothing coming out of the house", "Harsh, crunchy"], "mtx": ["No audio on the livestream", "Vocals too loud or buried", "Echo, doubling", "Stream sounds lopsided"], "s16o": ["Nothing coming out of the house", "Hum, buzz"], "atem": ["Stream sounds distorted", "No audio on the livestream"], "dr": ["Nothing coming out of the house"], "vmix": ["No audio on the livestream", "Stream sounds distorted", "Echo, doubling"], "amp": ["Only the subs", "Power cut"], "yt": ["No audio on the livestream"], "spk": ["Room sounds too boomy", "Only the subs", "Nothing coming out of the house"]};
   function cardFor(frag){for(var i=0;i<cards.length;i++){var s=cards[i].querySelector('summary');if(s&&s.textContent.indexOf(frag)>-1)return cards[i];}return null;}
   function goCard(frag){
     var c=cardFor(frag); if(!c)return;
