@@ -533,7 +533,7 @@ function applyListen(){if(!AC)return;
 /* ================= real multitrack stems ================= */
 // Recorded at the desk's inputs, so they play at true input level (no calibration).
 const STEMSETS={pw:['c1','c2','c3','c5','c6','c7','c8','c9','c15','c16','c17','c19','c21','c22','c23','c24'],speak:['c15','c16','c17','c25']};
-const STEMFEED={pw:{c9:['c9','c10']},speak:{c25:['c25','c27']}};   // one recording feeding two channels (bass DI split; skit/crowd mic)
+const STEMFEED={pw:{c9:['c9','c10']},speak:{c25:['c25','c27','c28']}};   // one recording feeding two channels (bass DI split; skit/crowd mic)
 let STEMS=false,stemSet=null,stemBufs={},stemSrcs=[],stemLoading=null;
 async function loadStems(set,onProg){const ids=STEMSETS[set];let done=0;const bufs={};
   await Promise.all(ids.map(async id=>{const r=await fetch('stems/'+set+'/'+id+'.mp3');if(!r.ok)throw new Error('missing '+id);const ab=await r.arrayBuffer();
