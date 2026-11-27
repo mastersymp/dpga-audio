@@ -190,7 +190,7 @@
 <header>
   <div class="brand">
     <img src="icon.svg" alt="" style="width:30px;height:30px;align-self:center;border-radius:7px"><h1>DPGA Audio <span id="vtitle">Troubleshooting</span></h1>
-    <span class="sub">Updated 26 Nov 2026 · X32 Compact · S16 on AES50 A/B · Patch list v6.0</span>
+    <span class="sub">Updated 26 Nov 2026 · X32 Compact · S16 on AES50 B · Patch list v6.0</span>
   </div>
   <div class="hdr-tools" id="tools-fix">
     <div class="search">
@@ -236,7 +236,7 @@
           <li>DCA faders up and unmuted.</li>
           <li><b>Subgroups</b> up and unmuted: vocal subgroup (Bus 13/14), instrument subgroup (Bus 11/12) and drum subgroup (Bus 9/10). Main LR is fed from the buses, so a muted subgroup is silent in the house. A muted subgroup silences every channel on it.</li>
           <li>Last DPGASunday scene loaded. Reloading resets mutes and faders to the saved starting point, as long as nothing was muted when the scene was saved.</li>
-          <li>S16 connected on <b>AES50 A/B</b> with steady link lights. Reseat the cable between songs. It must come from the S16's A port.</li>
+          <li>S16 connected on <b>AES50 B</b> with steady link lights. Reseat the cable between songs. Don't move it to the X32's port A; the S16 end stays in its A port.</li>
           <li>DriveRack powered, not muted, meters moving.</li>
           <li>Both amps on: Crown (subs) and Gemini (mains). No protect or stuck clip lights.</li>
           <li>Was everything powered in order? If not: amps off, check S16 + DriveRack, then amps on again.</li>
@@ -373,7 +373,7 @@
         <ul>
           <li><b>Hum on one instrument:</b> try the DI's ground lift; check the cable.</li>
           <li><b>Hum on everything:</b> usually power (generator, fans). Note the time and what was just switched on.</li>
-          <li><b>Pops or clicks on all channels:</b> the AES50 link to the S16. Note the time; check the AES50 A/B cable is fully seated (between songs).</li>
+          <li><b>Pops or clicks on all channels:</b> the AES50 link to the S16. Note the time; check the AES50 B cable is fully seated (between songs).</li>
         </ul>
       </div>
     </details>
@@ -419,7 +419,7 @@
     <details class="card" data-cat="mon">
       <summary><span class="tag t-mon">Monitors</span>Musician's in-ears silent, or missing something</summary>
       <div class="body">
-        <div class="first"><b>First:</b> is it one musician, or every in-ear at once? Every in-ear at once points to the AES50 A/B link to the S16.</div>
+        <div class="first"><b>First:</b> is it one musician, or every in-ear at once? Every in-ear at once points to the AES50 B link to the S16.</div>
         <p><b>One musician's whole mix is silent</b></p>
         <ol>
           <li>Their bus is unmuted with the fader up: <b>Bus 3</b> Drums, <b>4</b> Keys, <b>5</b> Bass, <b>6</b> Extra.</li>
@@ -509,7 +509,7 @@
           <li>Wait for the generator or mains to settle.</li>
           <li>Make sure the equipment room AC is on, or the amps can overheat.</li>
           <li>Power up in order: X32 › receivers + keys › S16 › DriveRack › both amps › stage monitors.</li>
-          <li>Load the last DPGASunday scene; check the S16 link on AES50 A/B.</li>
+          <li>Load the last DPGASunday scene; check the S16 link on AES50 B.</li>
           <li>Check the stream with media; log the time.</li>
         </ol>
         <p class="note">Lights flicker when the fans come on. If audio glitches at the same moment, write it down.</p>
@@ -680,7 +680,7 @@
   </div>
 
   <div class="section-title">Words used in this app</div>
-  <div class="ref" id="glossary"><div><b>DCA</b>A fader that controls a group of channels at once without carrying sound itself. Select a DCA on the desk to see which channels it controls.</div><div><b>Channel</b>One input: a mic, instrument or playback source, with its own gain, mute and fader.</div><div><b>Gain</b>How much the mic is boosted at the input. Set once (about −18 dB), then leave it.</div><div><b>Bus</b>A mix that channels feed into: a monitor mix, an FX send or a subgroup.</div><div><b>Subgroup</b>A bus that groups related channels before Main LR, like all vocals (13/14) or drums (9/10).</div><div><b>Send</b>How much of a channel goes to a bus.</div><div><b>Pre-fader</b>A send that ignores the channel fader. Used for monitors, so house moves don't change the band's mix.</div><div><b>Post-fader</b>A send that follows the channel fader. Used for the stream and delay.</div><div><b>Main LR</b>The main mix for the room speakers.</div><div><b>Matrix (MTX)</b>A mix built from buses and sent somewhere else. MTX 1/2 is the stream.</div><div><b>Sends on Fader</b>Turns the faders into send levels for one bus (button #8 for the stream). Press again to turn it off.</div><div><b>Mute group</b>A button that mutes a set of channels at once. If something's silent, check none is lit.</div><div><b>FX return</b>Where an effect (like the delay) comes back into the desk.</div><div><b>S16</b>The stage box in the music room: stage mics in, monitors and PA out.</div><div><b>AES50</b>The single cable linking the S16 and the X32. It runs from the S16’s A port to A or B on the X32.</div><div><b>Scene</b>A saved snapshot of the whole desk. Load DPGASunday to start.</div><div><b>Scene safe</b>Settings a scene load won't change, like routing and PLAY/REC.</div><div><b>PLAY/REC</b>Routing mode. REC = live inputs (service). PLAY = card playback (virtual soundcheck).</div><div><b>Talkback</b>The mic you use to talk to the band's in-ears (Talk A) or the singers' wedges (Talk B).</div><div><b>IEM</b>In-ear monitors, worn by the musicians.</div><div><b>Wedge</b>A floor monitor speaker. The singers share two on Bus 1.</div><div><b>DI box</b>Turns an instrument's output into a mic-level signal for the desk. Has a ground lift for hum.</div><div><b>Phantom power</b>Power sent down the mic cable for condenser mics.</div><div><b>Clipping</b>A signal too loud for the meter (red). It sounds harsh: lower the gain.</div><div><b>Feedback</b>The squeal when a mic picks up its own sound from a speaker. Pull the level down first.</div></div>
+  <div class="ref" id="glossary"><div><b>DCA</b>A fader that controls a group of channels at once without carrying sound itself. Select a DCA on the desk to see which channels it controls.</div><div><b>Channel</b>One input: a mic, instrument or playback source, with its own gain, mute and fader.</div><div><b>Gain</b>How much the mic is boosted at the input. Set once (about −18 dB), then leave it.</div><div><b>Bus</b>A mix that channels feed into: a monitor mix, an FX send or a subgroup.</div><div><b>Subgroup</b>A bus that groups related channels before Main LR, like all vocals (13/14) or drums (9/10).</div><div><b>Send</b>How much of a channel goes to a bus.</div><div><b>Pre-fader</b>A send that ignores the channel fader. Used for monitors, so house moves don't change the band's mix.</div><div><b>Post-fader</b>A send that follows the channel fader. Used for the stream and delay.</div><div><b>Main LR</b>The main mix for the room speakers.</div><div><b>Matrix (MTX)</b>A mix built from buses and sent somewhere else. MTX 1/2 is the stream.</div><div><b>Sends on Fader</b>Turns the faders into send levels for one bus (button #8 for the stream). Press again to turn it off.</div><div><b>Mute group</b>A button that mutes a set of channels at once. If something's silent, check none is lit.</div><div><b>FX return</b>Where an effect (like the delay) comes back into the desk.</div><div><b>S16</b>The stage box in the music room: stage mics in, monitors and PA out.</div><div><b>AES50</b>The single cable linking the S16 and the X32. It runs from the S16’s A port to port B on the X32.</div><div><b>Scene</b>A saved snapshot of the whole desk. Load DPGASunday to start.</div><div><b>Scene safe</b>Settings a scene load won't change, like routing and PLAY/REC.</div><div><b>PLAY/REC</b>Routing mode. REC = live inputs (service). PLAY = card playback (virtual soundcheck).</div><div><b>Talkback</b>The mic you use to talk to the band's in-ears (Talk A) or the singers' wedges (Talk B).</div><div><b>IEM</b>In-ear monitors, worn by the musicians.</div><div><b>Wedge</b>A floor monitor speaker. The singers share two on Bus 1.</div><div><b>DI box</b>Turns an instrument's output into a mic-level signal for the desk. Has a ground lift for hum.</div><div><b>Phantom power</b>Power sent down the mic cable for condenser mics.</div><div><b>Clipping</b>A signal too loud for the meter (red). It sounds harsh: lower the gain.</div><div><b>Feedback</b>The squeal when a mic picks up its own sound from a speaker. Pull the level down first.</div></div>
 </div>
 
 <!-- LOG -->
@@ -776,7 +776,7 @@
       ['X32 first','Then load the last DPGASunday scene'],
       ['Routing on REC, not PLAY','Routing screen: turn the rightmost knob to REC, push to confirm. The scene won\u2019t change it'],
       ['Mic receivers + keyboard',''],
-      ['S16 stage box','Check the AES50 A/B link lights are steady'],
+      ['S16 stage box','Check the AES50 B link lights are steady'],
       ['DriveRack',''],
       ['Both amps','Crown (subs) and Gemini (mains). Equipment room AC on'],
       ['Stage monitors','']]],
@@ -968,8 +968,8 @@
       d:'Plugged in on stage: podium (17), headset (18), BGVs (19–22 and 24), lead (23), skit/crowd mic (25, 27–28). Includes the 3 wireless and 2 corded mics.',c:'One mic silent with no meter: wireless battery, receiver on, RF meter, or the cable into the S16.'},
     {id:'srcL',x:265,y:34,w:150,t:'Local input sources',s:'drums · bass · keys · TB',lanes:['h','m'],
       d:'Plugged straight into the X32: drums (1–8), bass (9–10), talkback (12–14), keys (15–16).',c:'One instrument silent with no meter: cable into the X32 local input, DI box, or the instrument isn\u2019t sending.'},
-    {id:'s16',x:95,y:104,w:150,t:'S16 stage box',s:'AES50 A/B · ch 17–28',lanes:['h','s'],
-      d:'Converts the stage mics to digital and sends them to the X32 over one AES50 A/B cable, on channels 17–25, 27 and 28. Channels 25, 27 and 28 share one mic through User In. Channels 26 and 29–32 come from the card through User In, not the S16, and are unused.',c:'All stage-box channels dead, or pops on all of them: check the AES50 A/B cable and link lights. It must come from the S16\u2019s A port. Local channels 1–16 will still work, but the S16 also carries the monitors (S16 outputs 1–6) and the PA (S16 outputs 7/8), so those drop too.'},
+    {id:'s16',x:95,y:104,w:150,t:'S16 stage box',s:'AES50 B · ch 17–28',lanes:['h','s'],
+      d:'Converts the stage mics to digital and sends them to the X32 over one AES50 B cable, on channels 17–25, 27 and 28. Channels 25, 27 and 28 share one mic through User In. Channels 26 and 29–32 come from the card through User In, not the S16, and are unused.',c:'All stage-box channels dead, or pops on all of them: check the AES50 B cable and link lights. Never move it to the X32\u2019s port A; the S16 end stays in its A port. Local channels 1–16 will still work, but the S16 also carries the monitors (S16 outputs 1–6) and the PA (S16 outputs 7/8), so those drop too.'},
     {id:'loc',x:265,y:104,w:150,t:'X32 local inputs',s:'XLR 1–16 · ch 1–16',lanes:['h','m'],
       d:'The XLR inputs on the back of the console.',c:'Only local channels affected: check those cables at the console. The S16 channels are on a different path.'},
     {id:'aux',x:265,y:176,w:150,t:'Aux inputs',s:'laptop · Zoom · playback',lanes:['h','s','m'],
@@ -977,15 +977,15 @@
     {id:'ch',x:95,y:248,w:150,t:'X32 channels',s:'gain · mute · fader · DCA',lanes:['h','s','m'],
       d:'Each channel sets the gain and level of one source.',c:'Meter moving but no sound: channel mute, fader, its DCA, mute groups. Gain about −18 dB, then leave it.'},
     {id:'mon',x:265,y:248,w:150,t:'Monitor mixes',s:'S16 outputs 1–6',lanes:['m'],
-      d:'Pre-fader sends, so your house fader moves don’t change what the band hears. They travel over AES50 A/B to the S16 stage box in the music room and come out of its outputs 1–6: Bus 1 wedges, 3 drums, 4 keys, 5 bass, 6 extra. DCA 6 = all wedges.',c:'Singers can’t hear: raise their Bus 1 sends. Wedges silent: Bus 1 / DCA 6 up, AES50 A/B link OK, wedges powered, link cable between the two JBLs.'},
+      d:'Pre-fader sends, so your house fader moves don’t change what the band hears. They travel over AES50 B to the S16 stage box in the music room and come out of its outputs 1–6: Bus 1 wedges, 3 drums, 4 keys, 5 bass, 6 extra. DCA 6 = all wedges.',c:'Singers can’t hear: raise their Bus 1 sends. Wedges silent: Bus 1 / DCA 6 up, AES50 B link OK, wedges powered, link cable between the two JBLs.'},
     {id:'sub',x:180,y:318,w:320,t:'Buses: Aux + subgroups',s:'8 Aux · 9/10 Drums · 11/12 Instr · 13/14 Vox · 15/16 PComp',lanes:['h','s'],
       d:'Channels feed Bus 8 (Aux bus, post-fader) and the subgroups. Main LR and the stream are both built from buses 8–16.',c:'A muted bus silences everything on it, in the house AND online. That includes Bus 8, the Aux bus. DCA 1 = drums, DCA 2 = instruments.'},
     {id:'main',x:95,y:394,w:150,t:'Main LR',s:'fed from buses 8–16',lanes:['h'],
       d:'The master fader for the room. Fed from buses 8–16, plus AUX 3/4 directly when it’s unmuted (Zoom meetings).',c:'Meters moving on subgroups but Main LR silent: master fader up, not muted, no mute group lit.'},
     {id:'mtx',x:265,y:394,w:150,t:'MTX 1/2 Stream',s:'+ Bus 2 Crowd mic',lanes:['s'],
       d:'The stream mix: subgroups post-fader plus the ducked crowd mic. Independent of the Main fader. Out on XLR 1/2.',c:'Check first for any stream problem: solo MTX 1/2. Not muted, fader up, not in the red. About −5 dB in P&W, higher for speech.'},
-    {id:'s16o',x:95,y:466,w:150,t:'S16 outputs 7/8',s:'back down AES50 A/B',lanes:['h'],
-      d:'Main L/R travels back to the stage box to reach the PA.',c:'Main LR moving but no PA: AES50 A/B link, then the cables from S16 outputs 7/8 to the DriveRack.'},
+    {id:'s16o',x:95,y:466,w:150,t:'S16 outputs 7/8',s:'back down AES50 B',lanes:['h'],
+      d:'Main L/R travels back to the stage box to reach the PA.',c:'Main LR moving but no PA: AES50 B link, then the cables from S16 outputs 7/8 to the DriveRack.'},
     {id:'atem',x:265,y:466,w:150,t:'ATEM Mini',s:'Mic 1 input · LINE level',lanes:['s'],
       d:'Takes the stream mix into the video system. Master sits at −9 dB to avoid clipping.',c:'Check LAST, after MTX and vMix. Mic 1 must be on line level (mic level distorts). Don’t change the master.'},
     {id:'dr',x:95,y:538,w:150,t:'dbx DriveRack',s:'speaker processing',lanes:['h'],
