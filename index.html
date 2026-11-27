@@ -128,6 +128,12 @@
   .rel{display:flex;flex-direction:column;gap:6px}
   .relbtn{text-align:left;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px 12px;font:inherit;font-size:14.5px;cursor:pointer;min-height:44px;display:flex;justify-content:space-between;gap:10px;align-items:center}
   .relbtn span{color:var(--accent);font-size:20px}
+  details.icard{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:12px;margin:8px 0;overflow:hidden}
+  details.icard .body{padding:0 14px 12px}
+  details.icard h5{margin:12px 0 4px;font-size:14px;color:var(--accent)}
+  details.icard ol{margin:4px 0 6px;padding-left:20px;font-size:14.5px}
+  details.icard li{margin:3px 0}
+  .inapp{background:#3a2a12;border:1px solid #6b4a1a;color:#ffd79a;border-radius:8px;padding:8px 10px;font-size:14px;margin:10px 0 0}
   details.card.flash{outline:2px solid var(--accent);outline-offset:2px}
 
   /* more */
@@ -603,6 +609,26 @@
 
 <!-- MORE -->
 <div class="view" id="v-more">
+  <details class="icard" id="install" open>
+    <summary>Install on your phone</summary>
+    <div class="body">
+      <div class="inapp" id="inappWarn" hidden><b>Opened inside WhatsApp or another app?</b> Tap ⋮ or the share icon and choose <b>Open in Chrome</b> (Android) or <b>Open in Safari</b> (iPhone). Installing won't work from in here.</div>
+      <h5 id="h-and">Android (Chrome)</h5>
+      <ol id="s-and">
+        <li>Open the link in <b>Chrome</b>.</li>
+        <li>Tap <b>⋮</b> (top right).</li>
+        <li>Tap <b>Install app</b> or <b>Add to Home screen</b>, then <b>Install</b>.</li>
+      </ol>
+      <h5 id="h-ios">iPhone / iPad (Safari only)</h5>
+      <ol id="s-ios">
+        <li>Open the link in <b>Safari</b>. Chrome and WhatsApp can't install it on iPhone.</li>
+        <li>Tap <b>Share</b> (the square with the arrow, bottom of the screen).</li>
+        <li>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</li>
+      </ol>
+      <button type="button" class="btn primary" id="installBtn" hidden style="margin:6px 0">Install app</button>
+      <p class="note" style="margin-bottom:0">Then open it from the <b>DPGA Audio</b> icon on your home screen. It works offline, and updates itself when you're online.</p>
+    </div>
+  </details>
   <div class="section-title">Links</div>
   <div class="links">
     <a href="https://drive.google.com/drive/folders/1Vy2lDJ0ifaLqPwRojt5lhpobuuIRiIMP" target="_blank" rel="noopener"><div class="ic" style="background:#1d2c3d;color:#9cc7f0">DRV</div><div><b>DPGA SOUND folder</b><span>SOPs, patch lists, scenes (Google Drive)</span></div></a>
@@ -1059,6 +1085,19 @@
   twoTap($('clearLog'),'Clear log',function(){if(!log.length){toast('Nothing to clear');return;}log=[];store(KEY,log);renderLog();toast('Log cleared');});
   function tick(){$('clock').textContent='· now '+hhmm(Date.now());} tick(); setInterval(tick,15000);
   renderLog();
+})();
+</script>
+<script>
+(function(){
+  try{
+    var box=document.getElementById('install');if(!box)return;
+    var standalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+    if(standalone){box.hidden=true;return;}
+    var ua=navigator.userAgent||'';
+    var ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
+    if(/WhatsApp|FBAN|FBAV|Instagram|Line\/|; wv\)/.test(ua))document.getElementById('inappWarn').hidden=false;
+    if(ios){var b=box.querySelector('.body'),h=document.getElementById('h-and'),s=document.getElementById('s-and');b.insertBefore(s,document.getElementById('installBtn'));b.insertBefore(h,s);}
+  }catch(e){}
 })();
 </script>
 
