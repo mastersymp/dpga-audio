@@ -803,11 +803,14 @@ function startDrill(){
 const secs=()=>{const s=Math.floor((Date.now()-drill.t0)/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
 function renderDrill(){const b=$('#drillBody');if(!drill){b.innerHTML='A drill breaks one thing, like a Sunday gone wrong. Listen, find it, fix it. The timer stops when it’s fixed.';return;}
   const d=drill.d;b.className='';
-  b.innerHTML=`<div class="sym">“${esc(d.sym)}”</div><div class="row"><span class="timer" id="dt">${drill.done?drill.time:secs()}</span>${drill.done?'':'<button id="hintB">Hint</button><button id="showB">Show me</button>'}</div>`+
+  b.innerHTML=`<div class="sym">“${esc(d.sym)}”</div><div class="row"><span class="timer" id="dt">${drill.done?drill.time:secs()}</span>${drill.done?'':'<button id="hintB">Hint</button><button id="showB">Show me</button>'}<button id="endB">End drill</button></div>`+
    (drill.hint&&!drill.done?`<div class="hint">${esc(d.hint)}</div>`:'')+
    (drill.done?`<div class="ok-msg"><b>${drill.shown?'Here it was':'Fixed in '+drill.time}.</b> ${esc(d.ans)}<br><span class="note">${d.card?'In the app: Fix it › “'+esc(d.card)+'”.':esc(d.ref||'')}</span></div>`:'');
   if(!drill.done){$('#hintB').onclick=()=>{drill.hint=true;renderDrill();};$('#showB').onclick=()=>{drill.done=true;drill.shown=true;drill.time=secs();renderDrill();};}
+  $('#endB').onclick=endDrill;
   $('#drillBtn').textContent=drill.done?'Next drill':'New drill';}
+// End drill: back to the normal Sunday setup (routing, AES50 and cables included) and free practice
+function endDrill(){drill=null;clearInterval(dTimer);ST=serviceState();indexState();changed();renderDrill();$('#drillBtn').textContent='Start a drill';toast('Drill ended. The console is back to the normal Sunday setup.');}
 function checkDrill(){if(drill&&!drill.done&&drill.d.fixed(ST)){drill.done=true;drill.time=secs();renderDrill();toast('Fixed! '+drill.time);}}
 $('#drillBtn').onclick=()=>startDrill();
 setInterval(()=>{if(AC)checkDrill();},400);
