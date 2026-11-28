@@ -490,14 +490,16 @@ function syncMeters(){if(!AC||!A.in)return;const need=new Set();for(const m of m
   for(const a of all){if(!a||!a._src)continue;const on=need.has(a);if(on&&!a._c){a._src.connect(a);a._c=true;}else if(!on&&a._c){try{a._src.disconnect(a);}catch(e){}a._c=false;}}}
 /* ================= effective values ================= */
 const mgOn=list=>list.some(k=>ST.mg[k-1]);
+// muted by an engaged mute group, unless that member was unmuted on its own while the group stays engaged
+const mgMute=o=>mgOn(o.mg)&&!o.mgOv;
 const dcaMuted=list=>list.some(k=>!ST.dca[k].on);
 const dcaDb=list=>list.reduce((a,k)=>a+(ST.dca[k].fader<=-89?-200:ST.dca[k].fader),0);
 function stageOK(x){return !x.stage||ST.aes;}
 function routeOK(x){return !(ST.routing==='PLAY'&&!x.aux&&!x.fx);}
 function gateOpen(x){return x.cable&&stageOK(x)&&routeOK(x);}
-function inMuted(x){return !x.on||mgOn(x.mg)||dcaMuted(x.dca);}
+function inMuted(x){return !x.on||mgMute(x)||dcaMuted(x.dca);}
 function inGainDb(x){return x.fader<=-89?-200:x.fader+dcaDb(x.dca);}
-function busMuted(b){return !b.on||mgOn(b.mg)||dcaMuted(b.dca);}
+function busMuted(b){return !b.on||mgMute(b)||dcaMuted(b.dca);}
 function busGainDb(b){return b.fader<=-89?-200:b.fader+dcaDb(b.dca);}
 const T=()=>AC.currentTime;
 function setP(p,v){if(p._v===v)return;p._v=v;p.cancelScheduledValues(T());p.setTargetAtTime(v,T(),.012);}
@@ -563,8 +565,8 @@ const meters=[];
 
 function objOf(it){if(it.t==='in')return IN[it.id];if(it.t==='bus')return ST.buses[it.id];if(it.t==='dca')return ST.dca[it.id];if(it.t==='mtx')return ST.mtx[it.id];if(it.t==='main')return ST.main;return null;}
 function stripInfo(it){const o=objOf(it);
-  if(it.t==='in')return{num:o.num,name:o.name||'—',col:o.col,on:o.on,grpMute:mgOn(o.mg)||dcaMuted(o.dca),fader:o.fader};
-  if(it.t==='bus'){const num=String(o.num).includes('/')?String(o.num).split('/')[it.half||0]:o.num;return{num:'Bus '+num,name:o.name,col:o.col,on:o.on,grpMute:mgOn(o.mg)||dcaMuted(o.dca),fader:o.fader};}
+  if(it.t==='in')return{num:o.num,name:o.name||'—',col:o.col,on:o.on&&!mgMute(o),grpMute:dcaMuted(o.dca),fader:o.fader};
+  if(it.t==='bus'){const num=String(o.num).includes('/')?String(o.num).split('/')[it.half||0]:o.num;return{num:'Bus '+num,name:o.name,col:o.col,on:o.on&&!mgMute(o),grpMute:dcaMuted(o.dca),fader:o.fader};}
   if(it.t==='dca')return{num:'DCA '+it.id,name:o.name,col:o.col,on:o.on,fader:o.fader};
   if(it.t==='mtx'){const num=o.num.split('/')[it.half||0];return{num:'MTX '+num,name:o.name,col:o.col,on:o.on,fader:o.fader};}
   if(it.t==='main')return{num:'Main',name:'LR',col:'WH',on:o.on,fader:o.fader};}
@@ -590,7 +592,8 @@ function makeStrip(it,side){
   requestAnimationFrame(place);
   dragFader(fd,()=>db2pos(objOf(it).fader),(p)=>{if(it.t==='in')touched=it.id;const o=objOf(it);let d=pos2db(p);if(d<=-89)d=-90;o.fader=Math.round(d*10)/10;changed('drag');place();},()=>renderAll());
   const sk=soloKey(it);if(sk){const so=el('button','solo'+(SOLO.has(sk)?' on':''),'SOLO');so.onclick=()=>toggleSolo(sk);s.appendChild(so);}else{s.appendChild(el('div','solo-gap',''));}
-  const mb=el('button','mute'+(!inf.on?' on':(inf.grpMute?' grp':'')),'MUTE');mb.onclick=()=>{if(it.t==='in')touched=it.id;const o=objOf(it);o.on=!o.on;changed();};s.appendChild(mb);
+  const mb=el('button','mute'+(!inf.on?' on':(inf.grpMute?' grp':'')),'MUTE');mb.onclick=()=>{if(it.t==='in')touched=it.id;const o=objOf(it);
+    if((it.t==='in'||it.t==='bus')&&o.mg){if(!o.on||mgMute(o)){o.on=true;if(mgOn(o.mg))o.mgOv=true;}else{o.on=false;o.mgOv=false;}}else o.on=!o.on;changed();};s.appendChild(mb);
   if(it.t==='in')meters.push({side,el:m.firstChild,an:()=>A.in&&A.in[it.id].meter});
   else if(it.t==='bus')meters.push({side,el:m.firstChild,an:()=>A.bus&&A.bus[it.id].meter});
   else if(it.t==='main')meters.push({side,el:m.firstChild,an:()=>A.main&&A.main.meter});
@@ -606,7 +609,7 @@ function dragFader(fd,getP,cb,done){let on=false,y0=0,p0=0,moved=false;
   fd.addEventListener('pointerup',end);fd.addEventListener('pointercancel',end);}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function renderMG(){const r=$('#mgRow');r.innerHTML='<span class="sub" style="align-self:center">Mute groups</span>';
-  ST.mg.forEach((v,i)=>{const b=el('button',v?'on':'',`${i+1} ${MGNAME[i]}`);b.onclick=()=>{ST.mg[i]=!ST.mg[i];changed();};r.appendChild(b);});}
+  ST.mg.forEach((v,i)=>{const b=el('button',v?'on':'',`${i+1} ${MGNAME[i]}`);b.onclick=()=>{ST.mg[i]=!ST.mg[i];for(const o of[...ST.inputs,...Object.values(ST.buses)])if(o.mg.includes(i+1))o.mgOv=false;changed();};r.appendChild(b);});}
 
 /* ================= signal path ================= */
 function chip(txt,state){return `<span class="${state}">${state==='ok'?'✓ ':state==='bad'?'✗ ':''}${txt}</span>`;}
@@ -619,7 +622,7 @@ function inputChain(x){const c=[];
   if(x.stage)c.push(chip('Cable',x.cable?'ok':'bad'));
   if(!x.aux&&!x.fx)c.push(chip('Routing: '+ST.routing,ST.routing==='REC'?'ok':'bad'));
   c.push(chip('Gain '+fmt(x.trim)+' dB','ok'));
-  const why=[];if(!x.on)why.push('channel mute');x.mg.forEach(k=>{if(ST.mg[k-1])why.push('mute group '+k);});x.dca.forEach(k=>{if(!ST.dca[k].on)why.push('DCA '+k+' mute');});
+  const why=[];if(!x.on)why.push('channel mute');if(!x.mgOv)x.mg.forEach(k=>{if(ST.mg[k-1])why.push('mute group '+k);});x.dca.forEach(k=>{if(!ST.dca[k].on)why.push('DCA '+k+' mute');});
   c.push(chip(why.length?'Muted: '+why.join(', '):'Unmuted',why.length?'bad':'ok'));
   return c;}
 function postFader(x){const lvl=inGainDb(x);const dcaTxt=x.dca.length?' (with DCA '+x.dca.join(', ')+')':'';
@@ -631,7 +634,7 @@ function subPath(x,dest){const out=[];
   const b=ST.buses[busId];
   if(!pairs.length){const s=x.sends[busId==='b8'?8:2];out.push(chip('Send to Bus '+b.num+' '+fmt(s.lvl),s.lvl>-60?'ok':'bad'));}
   else out.push(chip('Pan '+(x.pan===0?'C':(x.pan<0?'L':'R')+Math.abs(x.pan))+' → Bus '+b.num,'ok'));
-  const bm=[];if(!b.on)bm.push('bus mute');b.mg.forEach(k=>{if(ST.mg[k-1])bm.push('mute group '+k);});b.dca.forEach(k=>{if(!ST.dca[k].on)bm.push('DCA '+k);});
+  const bm=[];if(!b.on)bm.push('bus mute');if(!b.mgOv)b.mg.forEach(k=>{if(ST.mg[k-1])bm.push('mute group '+k);});b.dca.forEach(k=>{if(!ST.dca[k].on)bm.push('DCA '+k);});
   out.push(chip(b.name+(bm.length?': '+bm.join(', '):''),bm.length||busGainDb(b)<-60?'bad':'ok'));
   if(dest==='house'){out.push(chip('Assigned to LR',b.lr?'ok':'bad'));out.push(chip('Main LR'+(ST.main.on?' '+fmt(ST.main.fader):': muted'),ST.main.on&&ST.main.fader>-60?'ok':'bad'));out.push(chip('S16 out 7/8 · AES50',ST.aes?'ok':'bad'));out.push(chip('House (mono)','ok'));}
   else{out.push(chip('MTX 1/2 send '+(b.mtxOn?fmt(b.mtx):'OFF'),b.mtxOn&&b.mtx>-60?'ok':'bad'));const m=ST.mtx.m1;out.push(chip('MTX 1/2'+(m.on?' '+fmt(m.fader):': muted'),m.on&&m.fader>-60?'ok':'bad'));out.push(chip('Stream (stereo)','ok'));}
@@ -727,7 +730,7 @@ const DRILLS=[
  {id:'post',sym:'The lead singer says her wedge disappears whenever you pull her fader down.',hint:'Select the lead and look at her Bus 1 send.',
   apply:s=>{s.inputs.find(x=>x.id==='c23').sends[1].type='POST';},fixed:s=>s.inputs.find(x=>x.id==='c23').sends[1].type==='PRE',ans:'Her Bus 1 send was switched to post-fader, so it followed her house fader. Monitor sends should be PRE.',card:'Singers can\'t hear themselves'},
  {id:'fx',sym:'The vocals sound dry: the delay effect is gone from the house and stream.',hint:'Find where FX 4 comes back into the desk.',
-  apply:s=>{s.mg[5]=true;},fixed:s=>!s.mg[5]&&s.inputs.find(x=>x.id==='f7').on&&s.dca[7].on,ans:'Mute group 6 was on, muting the FX 4 returns (7/8). The returns feed Bus 13/14.',card:'No vocal delay, or the delay sounds wrong'},
+  apply:s=>{s.mg[5]=true;},fixed:s=>!inMuted(s.inputs.find(x=>x.id==='f7'))&&!inMuted(s.inputs.find(x=>x.id==='f8')),ans:'Mute group 6 was on, muting the FX 4 returns (7/8). The returns feed Bus 13/14.',card:'No vocal delay, or the delay sounds wrong'},
  {id:'keys',sym:'On the stream the keys only come from the left side. One keys meter barely moves.',hint:'Compare the meters on 15 and 16, then check that channel’s cable.',
   apply:s=>{s.inputs.find(x=>x.id==='c16').cable=false;},fixed:s=>s.inputs.find(x=>x.id==='c16').cable,ans:'Keys R (ch 16) had a loose cable at the DI. One side of a stereo pair dead points to the cable or DI on that side.',card:'Stream sounds lopsided, or something only on one side'},
  {id:'pan',sym:'An online viewer says one backing singer sounds stuck in one ear.',hint:'Only the stream is stereo. Check the BGV pans.',
@@ -735,7 +738,7 @@ const DRILLS=[
  {id:'mtx',sym:'Online viewers hear nothing. The room sounds completely normal.',hint:'The stream has its own output, separate from Main LR.',
   apply:s=>{s.mtx.m1.on=false;},fixed:s=>s.mtx.m1.on,ans:'MTX 1/2 (stream L/R) was muted. Always check MTX first, then vMix, then the ATEM.',card:'No audio on the livestream'},
  {id:'mg1',sym:'The drums disappeared everywhere: the house, the stream and the drummer’s in-ears.',hint:'Something mutes channels 1–8 and their sends together.',
-  apply:s=>{s.mg[0]=true;},fixed:s=>!s.mg[0],ans:'Mute group 1 (drums) was on. A channel mute, including a mute group, silences pre-fader sends too.',card:'One mic has no sound, but its meter is moving'}
+  apply:s=>{s.mg[0]=true;},fixed:s=>['c1','c2','c3','c5','c6','c7','c8'].every(id=>!inMuted(s.inputs.find(x=>x.id===id)))&&!busMuted(s.buses.b9),ans:'Mute group 1 (drums) was on. A channel mute, including a mute group, silences pre-fader sends too.',card:'One mic has no sound, but its meter is moving'}
 ];
 const ch=id=>ST.inputs.find(x=>x.id===id);
 function chanDbAt(id,f){const x=IN[id],n=A.in[id];return (x.proc.hpf&&x.proc.hpf.on?respDb(n.h1,f)+respDb(n.h2,f):0)+eqDbAt(n.eqb,x.proc.eqOn,f);}
@@ -929,7 +932,7 @@ $('#clrSolo').onclick=()=>{SOLO.clear();applyListen();renderAll();};
 /* ================= glue ================= */
 let touched=null;
 function linkSync(id){const o=oddOf(id);if(!o||!ST.linked[o])return;const a=IN[id],b=IN[LINK[id]];if(!a||!b)return;
-  b.on=a.on;b.fader=a.fader;b.trim=a.trim;b.dca=[...a.dca];b.mg=[...a.mg];b.grp=Object.assign({},a.grp);
+  b.on=a.on;b.mgOv=a.mgOv;b.fader=a.fader;b.trim=a.trim;b.dca=[...a.dca];b.mg=[...a.mg];b.grp=Object.assign({},a.grp);
   for(const k in a.sends){const s=a.sends[k];b.sends[k]=Object.assign({},s);}if(a.proc&&b.proc)b.proc=clone(a.proc);wireSendTypes(b);}
 function changed(light){if(touched){linkSync(touched);touched=null;}if(AC)applyFX();if(AC){for(const x of ST.inputs)applyIn(x);for(const id in ST.buses)applyBus(id);applyMain();applyListen();}
   checkDrill();
