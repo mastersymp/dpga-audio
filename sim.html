@@ -502,9 +502,15 @@ function buildFeedback(){const r=AC.createDelay(.1);r.delayTime.value=.011;const
   A.fbGain=g(lin(FB.coupleDb));A.s16.b1.connect(r);r.connect(pk);pk.connect(bp);bp.connect(A.fbGain);A.fbGain.connect(lim);lim.connect(A.in.c23.gate);A.fbPeak=pk;A.fbBp=bp;}
 // loop gain estimate at the ring frequency (dB), used to check the feedback drill
 function respDb(node,f){const fr=new Float32Array([f]),m=new Float32Array(1),ph=new Float32Array(1);node.getFrequencyResponse(fr,m,ph);return 20*Math.log10(Math.max(m[0],1e-6));}
+// Response worked out from the settings themselves (not the live nodes, which glide to new values), so drill checks are instant and exact.
+let CALC=null,CF=null;
+function bandDb(e,f){if(!CALC){CALC=new OfflineAudioContext(1,128,AC?AC.sampleRate:48000);CF=CALC.createBiquadFilter();}
+  const ty=EQT[e.t]||'peaking';CF.type=ty;CF.frequency.value=e.f;CF.Q.value=ty==='peaking'?e.q:.707;CF.gain.value=(ty==='highpass'||ty==='lowpass')?0:e.g;
+  const fr=new Float32Array([f]),m=new Float32Array(1),ph=new Float32Array(1);CF.getFrequencyResponse(fr,m,ph);return 20*Math.log10(Math.max(m[0],1e-6));}
+function stateDbAt(pr,f,withHpf){let d=0;if(pr.eqOn)for(const e of pr.eq)d+=bandDb(e,f);if(withHpf&&pr.hpf&&pr.hpf.on)d+=2*bandDb({t:'LCut',f:pr.hpf.f,g:0,q:.707},f);return d;}
 function eqDbAt(b,on,f){if(!on)return 0;return b.bands.reduce((a,fl)=>a+respDb(fl,f),0);}
 function loopGainDb(){if(!A.in)return -99;const x=IN.c23,n=A.in.c23,b=ST.buses.b1,s=x.sends[1];if(!s||!s.on||inMuted(x)||busMuted(b)||!ST.aes||!gateOpen(x))return -99;
-  let d=x.trim+(x.proc.hpf.on?respDb(n.h1,FB.f)+respDb(n.h2,FB.f):0)+eqDbAt(n.eqb,x.proc.eqOn,FB.f)+(x.proc.dyn.on?x.proc.dyn.gain:0)+s.lvl+(s.type==='POST'?inGainDb(x):0)+busGainDb(b)+eqDbAt(A.bus.b1.eqb,b.proc.eqOn,FB.f)+FB.coupleDb+respDb(A.fbPeak,FB.f)+respDb(A.fbBp,FB.f);
+  let d=x.trim+stateDbAt(x.proc,FB.f,true)+(x.proc.dyn.on?x.proc.dyn.gain:0)+s.lvl+(s.type==='POST'?inGainDb(x):0)+busGainDb(b)+stateDbAt(b.proc,FB.f,false)+FB.coupleDb+respDb(A.fbPeak,FB.f)+respDb(A.fbBp,FB.f);
   return d;}
 
 
@@ -767,10 +773,10 @@ const DRILLS=[
   apply:s=>{s.mg[0]=true;},fixed:s=>['c1','c2','c3','c5','c6','c7','c8'].every(id=>!inMuted(s.inputs.find(x=>x.id===id)))&&!busMuted(s.buses.b9),ans:'Mute group 1 (drums) was on. A channel mute, including a mute group, silences pre-fader sends too.',card:'One mic has no sound, but its meter is moving'}
 ];
 const ch=id=>ST.inputs.find(x=>x.id===id);
-function chanDbAt(id,f){const x=IN[id],n=A.in[id];return (x.proc.hpf&&x.proc.hpf.on?respDb(n.h1,f)+respDb(n.h2,f):0)+eqDbAt(n.eqb,x.proc.eqOn,f);}
+function chanDbAt(id,f){return stateDbAt(IN[id].proc,f,true);}
 const ADV_DRILLS=[
  {id:'streambass',sym:'Online viewers say the stream is boomy and the kick and bass sound distorted on their speakers. The room sounds fine.',hint:'Only the stream has the problem, so look at the stream\u2019s own processing: MTX 1/2 (right bank, Mtx/Main).',
-  apply:s=>{const e=s.mtx.m1.proc.eq[1];e.g=13;e.q=1;},fixed:()=>eqDbAt(A.mtx.eqb,ST.mtx.m1.proc.eqOn,53)<=8,ans:'MTX 1/2 had +13 dB at 53 Hz. Phones and laptops can\u2019t play that much low end, so it distorts and pumps the stream limiter. The scene uses +4.75 dB.',card:'Stream sounds distorted'},
+  apply:s=>{const e=s.mtx.m1.proc.eq[1];e.g=13;e.q=1;},fixed:()=>stateDbAt(ST.mtx.m1.proc,53,false)<=8,ans:'MTX 1/2 had +13 dB at 53 Hz. Phones and laptops can\u2019t play that much low end, so it distorts and pumps the stream limiter. The scene uses +4.75 dB.',card:'Stream sounds distorted'},
  {id:'harsh',sym:'People say the lead vocal is harsh and piercing, especially on high notes.',hint:'Select the lead (ch 23), open EQ and look for a big boost in the upper mids (2–5 kHz).',
   apply:s=>{const e=s.inputs.find(x=>x.id==='c23').proc.eq[3];e.t='PEQ';e.f=3100;e.g=11;e.q=1.4;},fixed:()=>chanDbAt('c23',3100)<=4,ans:'Band 4 on the lead was boosted about +11 dB at 3.1 kHz. Cut it back (the scene has +2 dB). Boost gently; cut first.',card:'Harsh, crunchy or clipping sound'},
  {id:'boomy',sym:'The room is boomy: the bass is rumbling and covering everything.',hint:'Check the bass channels (9 and 10). Look for a big low boost, or just bring the bass down.',
